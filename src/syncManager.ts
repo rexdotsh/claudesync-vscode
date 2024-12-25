@@ -150,7 +150,7 @@ export class SyncManager {
         this.currentProject = await this.claudeClient.createProject(
           this.currentOrg.id,
           projectName,
-          "Created by ClaudeSync VSCode Extension"
+          "Created by ClaudeSync from VSCode"
         );
         successMessage = `Project '${projectName}' has been successfully created with Claude!`;
       } else {

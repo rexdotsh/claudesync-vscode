@@ -51,6 +51,10 @@
       {
         "command": "claudesync.configureStartupSync",
         "title": "ClaudeSync: Configure Startup Sync"
+      },
+      {
+        "command": "claudesync.openInBrowser",
+        "title": "ClaudeSync: Open Project in Browser"
       }
     ],
     "menus": {

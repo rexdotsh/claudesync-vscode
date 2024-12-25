@@ -415,14 +415,37 @@ export async function activate(context: vscode.ExtensionContext) {
     }
   );
 
+  // command to open project in browser
+  const openInBrowserCommand = vscode.commands.registerCommand("claudesync.openInBrowser", async () => {
+    const config = await configManager.getConfig();
+    if (!config.sessionToken) {
+      const setToken = await vscode.window.showErrorMessage("Please set your Claude session token first", "Set Token");
+      if (setToken) {
+        await vscode.commands.executeCommand("claudesync.setToken");
+      }
+      return;
+    }
+
+    if (!config.projectId) {
+      const init = await vscode.window.showErrorMessage("Project needs to be initialized first", "Initialize Project");
+      if (init) {
+        await vscode.commands.executeCommand("claudesync.initProject");
+      }
+      return;
+    }
+
+    vscode.env.openExternal(vscode.Uri.parse(`https://claude.ai/project/${config.projectId}`));
+  });
+
   context.subscriptions.push(
     setTokenCommand,
     initProjectCommand,
     syncCurrentFileCommand,
-    syncProjectInstructionsCommand,
     syncWorkspaceCommand,
+    syncProjectInstructionsCommand,
     configureAutoSyncCommand,
-    configureStartupSyncCommand
+    configureStartupSyncCommand,
+    openInBrowserCommand
   );
 
   // add file watcher to disposables if it exists
