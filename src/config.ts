@@ -108,7 +108,9 @@ export class ConfigManager {
   private getDefaultWorkspaceConfig(): WorkspaceConfig {
     return {
       excludePatterns: this.getDefaultExcludePatterns(),
-      maxFileSize: 1024 * 1024, // 1MB default
+      maxFileSize: 1024 * 1024, // 1MB
+      autoSync: false,
+      autoSyncDelay: 30 // 30 seconds default
     };
   }
 
@@ -126,6 +128,7 @@ export class ConfigManager {
       "yarn.lock",
       "pnpm-lock.yaml",
       "poetry.lock",
+      "bun.lockb",
       "cargo.lock",
     ];
   }

@@ -40,6 +40,10 @@
       {
         "command": "claudesync.syncProjectInstructions",
         "title": "ClaudeSync: Sync Project Instructions"
+      },
+      {
+        "command": "claudesync.configureAutoSync",
+        "title": "ClaudeSync: Configure Auto-Sync"
       }
     ],
     "menus": {

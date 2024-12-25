@@ -1,8 +1,10 @@
 import * as vscode from "vscode";
 import { ConfigManager } from "./config";
 import { SyncManager } from "./syncManager";
+import { AutoSyncStatus } from "./types";
 
 let outputChannel: vscode.OutputChannel;
+let autoSyncStatus: AutoSyncStatus = { enabled: false };
 
 export async function activate(context: vscode.ExtensionContext) {
   outputChannel = vscode.window.createOutputChannel("ClaudeSync");
@@ -15,6 +17,71 @@ export async function activate(context: vscode.ExtensionContext) {
     syncManager = new SyncManager(config, outputChannel, configManager);
   };
   await updateSyncManager();
+
+  // Function to handle file changes for autosync
+  let autoSyncTimer: NodeJS.Timeout | undefined;
+  const handleFileChange = async (uri: vscode.Uri) => {
+    const config = await configManager.getConfig();
+    if (!config.autoSync || !config.sessionToken) return;
+
+    // Clear existing timer
+    if (autoSyncTimer) {
+      clearTimeout(autoSyncTimer);
+    }
+
+    // Set new timer
+    autoSyncTimer = setTimeout(async () => {
+      await syncFiles([uri]);
+    }, config.autoSyncDelay * 1000);
+  };
+
+  // File system watcher
+  const fileWatcher = vscode.workspace.createFileSystemWatcher("**/*");
+  fileWatcher.onDidChange(handleFileChange);
+  fileWatcher.onDidCreate(handleFileChange);
+
+  // Command to configure autosync
+  const configureAutoSyncCommand = vscode.commands.registerCommand("claudesync.configureAutoSync", async (): Promise<void> => {
+    const config = await configManager.getConfig();
+    
+    // Ask user to enable/disable autosync
+    const enableAutoSync = await vscode.window.showQuickPick(["Enable", "Disable"], {
+      placeHolder: "Enable or disable auto-sync?",
+    });
+    
+    if (!enableAutoSync) return;
+    
+    let autoSyncDelay = config.autoSyncDelay;
+    if (enableAutoSync === "Enable") {
+      // Get delay from user (10 seconds to 3 minutes)
+      const delay = await vscode.window.showInputBox({
+        prompt: "Enter auto-sync delay in seconds (10-180)",
+        value: String(config.autoSyncDelay),
+        validateInput: (value) => {
+          const num = parseInt(value);
+          if (isNaN(num) || num < 10 || num > 180) {
+            return "Please enter a number between 10 and 180 seconds";
+          }
+          return null;
+        },
+      });
+      
+      if (!delay) return;
+      autoSyncDelay = parseInt(delay);
+    }
+    
+    // Save configuration
+    await configManager.saveWorkspaceConfig({
+      autoSync: enableAutoSync === "Enable",
+      autoSyncDelay,
+    });
+    
+    vscode.window.showInformationMessage(
+      `Auto-sync ${enableAutoSync === "Enable" ? "enabled" : "disabled"}${
+        enableAutoSync === "Enable" ? ` with ${autoSyncDelay} seconds delay` : ""
+      }`
+    );
+  });
 
   async function syncFiles(files: vscode.Uri[]) {
     const config = await configManager.getConfig();
@@ -211,7 +278,9 @@ export async function activate(context: vscode.ExtensionContext) {
     initProjectCommand,
     syncCurrentFileCommand,
     syncProjectInstructionsCommand,
-    syncWorkspaceCommand
+    syncWorkspaceCommand,
+    configureAutoSyncCommand,
+    fileWatcher
   );
 }
 

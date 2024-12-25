@@ -7,6 +7,8 @@ export interface WorkspaceConfig {
   projectId?: string;
   excludePatterns: string[];
   maxFileSize: number; // in bytes
+  autoSync: boolean;
+  autoSyncDelay: number; // in seconds
 }
 
 export interface ClaudeSyncConfig extends GlobalConfig, WorkspaceConfig {}
@@ -29,4 +31,9 @@ export interface SyncResult {
   success: boolean;
   message: string;
   error?: Error;
+}
+
+export interface AutoSyncStatus {
+  enabled: boolean;
+  timer?: NodeJS.Timeout;
 }
