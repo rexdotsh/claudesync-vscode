@@ -193,11 +193,12 @@ export class SyncManager {
 
       const existingFiles = await this.claudeClient.listFiles(this.currentOrg!.id, this.currentProject!.id);
       let skipped = 0;
+      let synced = 0;
 
       await vscode.window.withProgress(
         {
           location: vscode.ProgressLocation.Notification,
-          title: "Syncing files with Claude",
+          title: "Uploading to Claude",
           cancellable: false,
         },
         async (progress) => {
@@ -206,7 +207,7 @@ export class SyncManager {
 
           for (const file of fileContents) {
             progress.report({
-              message: `Syncing ${file.path} (${++current}/${total})`,
+              message: `${++current}/${total}: ${file.path}`,
               increment: (1 / total) * 100,
             });
 
@@ -228,6 +229,7 @@ export class SyncManager {
             }
 
             await this.claudeClient.uploadFile(this.currentOrg!.id, this.currentProject!.id, file.path, file.content);
+            synced++;
           }
 
           if (skipped > 0) {
@@ -241,6 +243,11 @@ export class SyncManager {
         message: `Successfully synced ${fileContents.length} file${fileContents.length === 1 ? "" : "s"} with Claude${
           skipped > 0 ? ` (${skipped} unchanged file${skipped === 1 ? "" : "s"} skipped)` : ""
         }`,
+        data: {
+          syncedFiles: synced,
+          skippedFiles: skipped,
+          totalFiles: fileContents.length,
+        },
       };
     });
   }
@@ -271,21 +278,76 @@ export class SyncManager {
     return selected?.org;
   }
 
+  private isBinaryContent(content: Uint8Array): boolean {
+    // check for null bytes which are common in binary files
+    let nullCount = 0;
+    let nonPrintableCount = 0;
+    const sampleSize = Math.min(content.length, 1024); // sample only the first 1KB
+
+    for (let i = 0; i < sampleSize; i++) {
+      if (content[i] === 0) {
+        nullCount++;
+      }
+      // check for non-printable characters (except common whitespace)
+      if ((content[i] < 32 && ![9, 10, 13].includes(content[i])) || content[i] === 127) {
+        nonPrintableCount++;
+      }
+    }
+
+    // if we find any null bytes, consider it binary
+    if (nullCount > 0) {
+      return true;
+    }
+
+    // if more than 30% of the content is non-printable, consider it binary
+    return nonPrintableCount / sampleSize > 0.3;
+  }
+
   private async prepareFiles(files: vscode.Uri[]): Promise<FileContent[]> {
     const result: FileContent[] = [];
+    const detectedBinaryFiles: string[] = [];
+
+    this.outputChannel.appendLine(`Starting to process ${files.length} files...`);
+    let excludedByConfig = 0;
+    let excludedByGitignore = 0;
+    let excludedBinary = 0;
+    let excludedTooLarge = 0;
+    let failedToRead = 0;
 
     for (const file of files) {
       try {
-        const content = await vscode.workspace.fs.readFile(file);
-        const textContent = new TextDecoder().decode(content);
+        const relativePath = vscode.workspace.asRelativePath(file);
 
-        if (content.byteLength > this.config.maxFileSize) {
-          vscode.window.showWarningMessage(`Skipping ${file.fsPath}: File too large`);
+        // Check config exclusions first
+        const isExcludedByConfig = this.config.excludePatterns.some((pattern) =>
+          GitignoreManager.isMatch(pattern, relativePath, true)
+        );
+        if (isExcludedByConfig) {
+          excludedByConfig++;
           continue;
         }
 
-        const relativePath = vscode.workspace.asRelativePath(file);
-        if (this.shouldExcludeFile(relativePath)) {
+        // Check gitignore patterns
+        if (this.gitignoreManager.shouldIgnore(relativePath)) {
+          excludedByGitignore++;
+          continue;
+        }
+
+        const content = await vscode.workspace.fs.readFile(file);
+
+        // check for binary files
+        if (this.isBinaryContent(content)) {
+          this.outputChannel.appendLine(`Skipping binary file: ${relativePath}`);
+          detectedBinaryFiles.push(relativePath);
+          excludedBinary++;
+          continue;
+        }
+
+        const textContent = new TextDecoder().decode(content);
+
+        if (content.byteLength > this.config.maxFileSize) {
+          this.outputChannel.appendLine(`Skipping ${file.fsPath}: File too large`);
+          excludedTooLarge++;
           continue;
         }
 
@@ -296,14 +358,45 @@ export class SyncManager {
         });
       } catch (error) {
         const errorMsg = `Failed to read ${file.fsPath}: ${error}`;
-        vscode.window.showErrorMessage(errorMsg);
+        this.outputChannel.appendLine(errorMsg);
+        failedToRead++;
       }
+    }
+
+    this.outputChannel.appendLine(`
+File processing summary:
+- Total files initially: ${files.length}
+- Excluded by config patterns: ${excludedByConfig}
+- Excluded by gitignore: ${excludedByGitignore}
+- Excluded binary files: ${excludedBinary}
+- Excluded too large files: ${excludedTooLarge}
+- Failed to read: ${failedToRead}
+- Final files to sync: ${result.length}
+`);
+
+    // if we found any binary files, update the config to exclude them
+    if (detectedBinaryFiles.length > 0) {
+      const newPatterns = detectedBinaryFiles.map((path) => {
+        return path;
+      });
+
+      const currentPatterns = this.config.excludePatterns || [];
+      const updatedPatterns = [...new Set([...currentPatterns, ...newPatterns])];
+
+      await this.configManager.saveWorkspaceConfig({
+        excludePatterns: updatedPatterns,
+      });
+
+      this.outputChannel.appendLine(
+        `Added ${detectedBinaryFiles.length} binary file(s) to exclude patterns: ${newPatterns.join(", ")}`
+      );
+      this.config = await this.configManager.getConfig();
     }
 
     return result;
   }
 
-  private shouldExcludeFile(filePath: string): boolean {
+  public shouldExcludeFile(filePath: string): boolean {
     const isExcludedByConfig = this.config.excludePatterns.some((pattern) => {
       return GitignoreManager.isMatch(pattern, filePath, true);
     });

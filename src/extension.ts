@@ -190,21 +190,29 @@ export async function activate(context: vscode.ExtensionContext) {
       return;
     }
 
+    // Pass all files to syncManager which will handle filtering
+    if (files.length === 0) {
+      vscode.window.showInformationMessage("No files to sync");
+      return;
+    }
+
     const maxRetries = 5;
     let attempt = 0;
     let success = false;
+    let lastResult: any;
 
     await vscode.window.withProgress(
       {
         location: vscode.ProgressLocation.Notification,
-        title: `Syncing ${files.length} file${files.length === 1 ? "" : "s"} with Claude`,
+        title: "Syncing with Claude",
         cancellable: false,
       },
       async (progress) => {
         while (attempt < maxRetries && !success) {
           try {
-            progress.report({ message: attempt > 0 ? `Attempt ${attempt + 1}/${maxRetries}` : "Starting sync..." });
+            progress.report({ message: attempt > 0 ? `Attempt ${attempt + 1}/${maxRetries}` : "Processing files..." });
             const result = await syncManager.syncFiles(files);
+            lastResult = result;
 
             if (result.success) {
               success = true;
@@ -223,11 +231,12 @@ export async function activate(context: vscode.ExtensionContext) {
             } else {
               const errorMsg = result.error ? `${result.message}: ${result.error.message}` : result.message;
               outputChannel.appendLine(`Failed to sync files: ${errorMsg}`);
-              if (attempt < maxRetries - 1) {
-                await new Promise((resolve) => setTimeout(resolve, 150));
-                attempt++;
-                progress.report({ message: `Retrying... (Attempt ${attempt + 1}/${maxRetries})` });
+              attempt++;
+              if (attempt >= maxRetries) {
+                break;
               }
+              await new Promise((resolve) => setTimeout(resolve, 150));
+              progress.report({ message: `Retrying... (Attempt ${attempt + 1}/${maxRetries})` });
             }
           } catch (error) {
             const errorMsg = `Failed to sync files: ${error instanceof Error ? error.message : String(error)}`;
@@ -235,11 +244,12 @@ export async function activate(context: vscode.ExtensionContext) {
             if (error instanceof Error && error.stack) {
               outputChannel.appendLine(`Stack trace: ${error.stack}`);
             }
-            if (attempt < maxRetries - 1) {
-              await new Promise((resolve) => setTimeout(resolve, 100));
-              attempt++;
-              progress.report({ message: `Retrying... (Attempt ${attempt + 1}/${maxRetries})` });
+            attempt++;
+            if (attempt >= maxRetries) {
+              break;
             }
+            await new Promise((resolve) => setTimeout(resolve, 100));
+            progress.report({ message: `Retrying... (Attempt ${attempt + 1}/${maxRetries})` });
           }
         }
 
@@ -250,10 +260,15 @@ export async function activate(context: vscode.ExtensionContext) {
         if (success) {
           // add small delay to ensure progress notification has closed
           await new Promise((resolve) => setTimeout(resolve, 500));
-          vscode.window.showInformationMessage(
-            `Successfully synced ${files.length} file${files.length === 1 ? "" : "s"} with Claude!`
-          );
-        } else if (attempt >= maxRetries) {
+          const syncedFiles = lastResult?.data?.syncedFiles || 0;
+          if (syncedFiles === 0) {
+            vscode.window.showInformationMessage("No files needed syncing - all files were up to date.");
+          } else {
+            vscode.window.showInformationMessage(
+              `Successfully synced ${syncedFiles} file${syncedFiles === 1 ? "" : "s"} with Claude!`
+            );
+          }
+        } else {
           vscode.window.showErrorMessage("Failed to sync files after maximum retries");
         }
       }
@@ -348,7 +363,8 @@ export async function activate(context: vscode.ExtensionContext) {
       const excludePatterns = config.excludePatterns || [];
       outputChannel.appendLine(`Using exclude patterns from config: ${excludePatterns.join(", ")}`);
 
-      const files = await vscode.workspace.findFiles("**/*", `{${excludePatterns.join(",")}}`);
+      const files = await vscode.workspace.findFiles("**/*");
+      outputChannel.appendLine(`Found ${files.length} total files before filtering`);
       await syncFiles(files);
     } catch (error) {
       const errorMsg = `Failed to sync workspace: ${error instanceof Error ? error.message : String(error)}`;
