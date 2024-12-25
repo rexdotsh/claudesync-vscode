@@ -23,7 +23,11 @@
       },
       {
         "command": "claudesync.syncCurrentFile",
-        "title": "ClaudeSync: Sync Current File"
+        "title": "ClaudeSync: Sync Current File",
+        "icon": {
+          "light": "resources/sync-light.svg",
+          "dark": "resources/sync-dark.svg"
+        }
       },
       {
         "command": "claudesync.syncSelected",
@@ -32,14 +36,6 @@
       {
         "command": "claudesync.syncProjectInstructions",
         "title": "ClaudeSync: Sync Project Instructions"
-      },
-      {
-        "command": "claudesync.syncCurrentFile",
-        "title": "Sync this file",
-        "icon": {
-          "light": "resources/sync-light.svg",
-          "dark": "resources/sync-dark.svg"
-        }
       }
     ],
     "menus": {
@@ -64,46 +60,6 @@
           "when": "resourceLangId"
         }
       ]
-    },
-    "configuration": {
-      "title": "ClaudeSync",
-      "properties": {
-        "claudesync": {
-          "type": "object",
-          "properties": {
-            "organizationId": {
-              "type": "string",
-              "description": "Claude AI organization ID"
-            },
-            "projectId": {
-              "type": "string",
-              "description": "Claude AI project ID"
-            },
-            "excludePatterns": {
-              "type": "array",
-              "items": {
-                "type": "string"
-              },
-              "default": [
-                "node_modules/**",
-                ".git/**",
-                "dist/**",
-                "build/**",
-                "**/*.pyc",
-                "**/__pycache__/**",
-                ".env",
-                ".env.*"
-              ],
-              "description": "Patterns to exclude from syncing"
-            },
-            "maxFileSize": {
-              "type": "number",
-              "default": 1048576,
-              "description": "Maximum file size in bytes (default: 1MB)"
-            }
-          }
-        }
-      }
     }
   },
   "scripts": {

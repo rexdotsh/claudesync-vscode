@@ -7,7 +7,7 @@ let outputChannel: vscode.OutputChannel;
 export async function activate(context: vscode.ExtensionContext) {
   outputChannel = vscode.window.createOutputChannel("ClaudeSync");
 
-  const configManager = new ConfigManager(context);
+  const configManager = new ConfigManager(context, outputChannel);
   let syncManager: SyncManager;
 
   const updateSyncManager = async () => {

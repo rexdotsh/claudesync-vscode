@@ -42,9 +42,9 @@ export class SyncManager {
     }
 
     this.outputChannel.appendLine("Loading organization and project from config...");
-    const config = vscode.workspace.getConfiguration("claudesync");
-    const orgId = config.get<string>("organizationId");
-    const projectId = config.get<string>("projectId");
+    const config = await this.configManager.getConfig();
+    const orgId = config.organizationId;
+    const projectId = config.projectId;
 
     if (!orgId || !projectId) {
       return {
