@@ -50,6 +50,10 @@
         "command": "claudesync.openInBrowser",
         "title": "ClaudeSync: Open Project in Browser",
         "icon": "resources/browser.svg"
+      },
+      {
+        "command": "claudesync.showSettings",
+        "title": "ClaudeSync: Show Current Settings"
       }
     ],
     "menus": {
@@ -78,6 +82,40 @@
           "when": "resourceLangId"
         }
       ]
+    },
+    "configuration": {
+      "title": "ClaudeSync",
+      "properties": {
+        "claudesync.sessionToken": {
+          "type": "string",
+          "default": "",
+          "description": "Claude.ai session token for authentication"
+        },
+        "claudesync.autoSync": {
+          "type": "boolean",
+          "default": false,
+          "description": "Enable/disable automatic file syncing"
+        },
+        "claudesync.autoSyncInterval": {
+          "type": "number",
+          "default": 300,
+          "minimum": 10,
+          "description": "Interval in seconds between auto-syncs (minimum 10 seconds)"
+        },
+        "claudesync.syncOnStartup": {
+          "type": "boolean",
+          "default": false,
+          "description": "Automatically sync workspace when VS Code starts"
+        },
+        "claudesync.excludePatterns": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "default": ["node_modules/**", "dist/**", ".git/**"],
+          "description": "Patterns to exclude from syncing"
+        }
+      }
     }
   },
   "scripts": {

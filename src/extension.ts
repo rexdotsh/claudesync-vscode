@@ -72,8 +72,14 @@ export async function activate(context: vscode.ExtensionContext) {
 
     // sync workspace on startup if enabled and project is initialized
     const isInitialized = await syncManager.isProjectInitialized();
-    if (isInitialized && config.sessionToken && config.syncOnStartup) {
+    const vscodeConfig = vscode.workspace.getConfiguration('claudesync');
+    const syncOnStartup = vscodeConfig.get('syncOnStartup') as boolean;
+    
+    if (isInitialized && config.sessionToken && syncOnStartup) {
+      outputChannel.appendLine(`Sync on startup is enabled: ${syncOnStartup}`);
       vscode.commands.executeCommand("claudesync.syncWorkspace");
+    } else {
+      outputChannel.appendLine(`Skipping sync on startup. Initialized: ${isInitialized}, Has token: ${!!config.sessionToken}, Sync on startup: ${syncOnStartup}`);
     }
 
     // setup file watcher based on current state
@@ -160,7 +166,7 @@ export async function activate(context: vscode.ExtensionContext) {
 
   // track last failed sync time to prevent rapid retries
   let lastFailedSyncTime = 0;
-  const SYNC_COOLDOWN_MS = 500;
+  const SYNC_COOLDOWN_MS = 3000;
 
   async function syncFiles(files: vscode.Uri[]) {
     const config = await configManager.getConfig();
@@ -194,7 +200,7 @@ export async function activate(context: vscode.ExtensionContext) {
       return;
     }
 
-    const maxRetries = 10; // claude api is very unreliable
+    const maxRetries = 20; // claude api is very unreliable
     let attempt = 0;
     let success = false;
     let lastResult: any;
