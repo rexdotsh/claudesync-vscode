@@ -16,7 +16,7 @@ export async function activate(context: vscode.ExtensionContext) {
   };
   await updateSyncManager();
 
-  // Command to set Claude session token
+  // command to set Claude session token
   const setTokenCommand = vscode.commands.registerCommand("claudesync.setToken", async () => {
     const token = await vscode.window.showInputBox({
       prompt: "Enter your Claude session token",
@@ -42,7 +42,7 @@ export async function activate(context: vscode.ExtensionContext) {
     }
   });
 
-  // Command to initialize project
+  // command to initialize project
   const initProjectCommand = vscode.commands.registerCommand("claudesync.initProject", async () => {
     const config = await configManager.getConfig();
 
@@ -69,7 +69,7 @@ export async function activate(context: vscode.ExtensionContext) {
     }
   });
 
-  // Command to sync current file
+  // command to sync current file
   const syncCurrentFileCommand = vscode.commands.registerCommand("claudesync.syncCurrentFile", async () => {
     const editor = vscode.window.activeTextEditor;
     if (!editor) {
@@ -170,7 +170,6 @@ export async function activate(context: vscode.ExtensionContext) {
   context.subscriptions.push(setTokenCommand, initProjectCommand, syncCurrentFileCommand, syncSelectedCommand);
 }
 
-// This method is called when your extension is deactivated
 export function deactivate() {
   if (outputChannel) {
     outputChannel.dispose();

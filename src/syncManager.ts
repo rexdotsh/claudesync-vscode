@@ -1,7 +1,7 @@
 import * as vscode from "vscode";
 import { ClaudeClient, Organization, Project } from "./claude/client";
 import { ClaudeSyncConfig, FileContent, SyncResult } from "./types";
-import { computeMD5Hash } from "./utils";
+import { computeSHA256Hash } from "./utils";
 
 export class SyncManager {
   private config: ClaudeSyncConfig;
@@ -18,7 +18,7 @@ export class SyncManager {
 
   public async initializeProject(): Promise<SyncResult> {
     try {
-      // Get organizations
+      // get organizations
       const orgs = await this.claudeClient.getOrganizations();
 
       if (!orgs.length) {
@@ -28,7 +28,7 @@ export class SyncManager {
         };
       }
 
-      // Let user select organization if multiple
+      // let user select organization if multiple
       this.currentOrg = orgs.length === 1 ? orgs[0] : await this.selectOrganization(orgs);
       if (!this.currentOrg) {
         return {
@@ -37,7 +37,7 @@ export class SyncManager {
         };
       }
 
-      // Get workspace name for project
+      // get workspace name for project
       const workspaceFolder = vscode.workspace.workspaceFolders?.[0];
       if (!workspaceFolder) {
         return {
@@ -60,7 +60,7 @@ export class SyncManager {
         );
       }
 
-      // Save project info in config
+      // save project info in config
       const config = vscode.workspace.getConfiguration();
       await config.update(
         "claudesync",
@@ -95,7 +95,6 @@ export class SyncManager {
 
   public async syncFiles(files: vscode.Uri[]): Promise<SyncResult> {
     try {
-      // Load org and project from config if not set
       if (!this.currentOrg || !this.currentProject) {
         this.outputChannel.appendLine("Loading organization and project from config...");
         const config = vscode.workspace.getConfiguration("claudesync");
@@ -134,7 +133,7 @@ export class SyncManager {
         );
       }
 
-      // Prepare files
+      // prepare files
       this.outputChannel.appendLine("Preparing files for sync...");
       const fileContents = await this.prepareFiles(files);
       if (!fileContents.length) {
@@ -145,10 +144,10 @@ export class SyncManager {
       }
       this.outputChannel.appendLine(`Prepared ${fileContents.length} files for sync`);
 
-      // Get existing files to determine what to update/create
+      // get existing files to determine what to update/create
       const existingFiles = await this.claudeClient.listFiles(this.currentOrg.id, this.currentProject.id);
 
-      // Upload/update files
+      // upload/update files
       const progress = await vscode.window.withProgress(
         {
           location: vscode.ProgressLocation.Notification,
@@ -171,8 +170,8 @@ export class SyncManager {
 
             if (existingFile) {
               // Compute hash of existing file content
-              const remoteHash = await computeMD5Hash(existingFile.content);
-              const localHash = await computeMD5Hash(file.content);
+              const remoteHash = await computeSHA256Hash(existingFile.content);
+              const localHash = await computeSHA256Hash(file.content);
 
               // Only update if content has changed
               if (localHash === remoteHash) {
@@ -231,13 +230,13 @@ export class SyncManager {
         const content = await vscode.workspace.fs.readFile(file);
         const textContent = new TextDecoder().decode(content);
 
-        // Skip if file is too large
+        // skip if file is too large
         if (content.byteLength > this.config.maxFileSize) {
           vscode.window.showWarningMessage(`Skipping ${file.fsPath}: File too large`);
           continue;
         }
 
-        // Skip if file should be excluded
+        // skip if file should be excluded
         const relativePath = vscode.workspace.asRelativePath(file);
         if (this.shouldExcludeFile(relativePath)) {
           continue;
