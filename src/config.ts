@@ -114,7 +114,7 @@ export class ConfigManager {
   private getDefaultWorkspaceConfig(): WorkspaceConfig {
     return {
       excludePatterns: this.getDefaultExcludePatterns(),
-      maxFileSize: 1024 * 1024, // 1MB
+      maxFileSize: 2 * 1024 * 1024, // 2MB
       autoSync: false,
       autoSyncDelay: 30,
       syncOnStartup: false, // slows down startup

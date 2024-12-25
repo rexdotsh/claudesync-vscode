@@ -194,7 +194,7 @@ export async function activate(context: vscode.ExtensionContext) {
       return;
     }
 
-    const maxRetries = 5;
+    const maxRetries = 10; // claude api is very unreliable
     let attempt = 0;
     let success = false;
     let lastResult: any;
@@ -267,7 +267,9 @@ export async function activate(context: vscode.ExtensionContext) {
             );
           }
         } else {
-          vscode.window.showErrorMessage("Failed to sync files after maximum retries");
+          vscode.window.showErrorMessage(
+            "Failed to sync files after maximum retries, is your Claude session token correct?"
+          );
         }
       }
     );

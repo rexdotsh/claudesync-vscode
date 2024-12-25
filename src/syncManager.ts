@@ -305,92 +305,49 @@ export class SyncManager {
 
   private async prepareFiles(files: vscode.Uri[]): Promise<FileContent[]> {
     const result: FileContent[] = [];
-    const detectedBinaryFiles: string[] = [];
-
-    this.outputChannel.appendLine(`Starting to process ${files.length} files...`);
-    let excludedByConfig = 0;
-    let excludedByGitignore = 0;
-    let excludedBinary = 0;
-    let excludedTooLarge = 0;
-    let failedToRead = 0;
+    const binaryFiles = new Set<string>();
 
     for (const file of files) {
       try {
         const relativePath = vscode.workspace.asRelativePath(file);
 
-        // Check config exclusions first
-        const isExcludedByConfig = this.config.excludePatterns.some((pattern) =>
-          GitignoreManager.isMatch(pattern, relativePath, true)
-        );
-        if (isExcludedByConfig) {
-          excludedByConfig++;
-          continue;
-        }
-
-        // Check gitignore patterns
-        if (this.gitignoreManager.shouldIgnore(relativePath)) {
-          excludedByGitignore++;
+        // skip excluded files
+        if (
+          this.config.excludePatterns.some((pattern) => GitignoreManager.isMatch(pattern, relativePath, true)) ||
+          this.gitignoreManager.shouldIgnore(relativePath)
+        ) {
           continue;
         }
 
         const content = await vscode.workspace.fs.readFile(file);
 
-        // check for binary files
-        if (this.isBinaryContent(content)) {
-          this.outputChannel.appendLine(`Skipping binary file: ${relativePath}`);
-          detectedBinaryFiles.push(relativePath);
-          excludedBinary++;
+        // skip binary or large files
+        if (content.byteLength > this.config.maxFileSize) {
           continue;
         }
 
-        const textContent = new TextDecoder().decode(content);
-
-        if (content.byteLength > this.config.maxFileSize) {
-          this.outputChannel.appendLine(`Skipping ${file.fsPath}: File too large`);
-          excludedTooLarge++;
+        if (this.isBinaryContent(content)) {
+          binaryFiles.add(relativePath);
           continue;
         }
 
         result.push({
           path: relativePath,
-          content: textContent,
+          content: new TextDecoder().decode(content),
           size: content.byteLength,
         });
-      } catch (error) {
-        const errorMsg = `Failed to read ${file.fsPath}: ${error}`;
-        this.outputChannel.appendLine(errorMsg);
-        failedToRead++;
+      } catch {
+        continue;
       }
     }
 
-    this.outputChannel.appendLine(`
-File processing summary:
-- Total files initially: ${files.length}
-- Excluded by config patterns: ${excludedByConfig}
-- Excluded by gitignore: ${excludedByGitignore}
-- Excluded binary files: ${excludedBinary}
-- Excluded too large files: ${excludedTooLarge}
-- Failed to read: ${failedToRead}
-- Final files to sync: ${result.length}
-`);
-
-    // if we found any binary files, update the config to exclude them
-    if (detectedBinaryFiles.length > 0) {
-      const newPatterns = detectedBinaryFiles.map((path) => {
-        return path;
-      });
-
-      const currentPatterns = this.config.excludePatterns || [];
-      const updatedPatterns = [...new Set([...currentPatterns, ...newPatterns])];
-
-      await this.configManager.saveWorkspaceConfig({
-        excludePatterns: updatedPatterns,
-      });
-
-      this.outputChannel.appendLine(
-        `Added ${detectedBinaryFiles.length} binary file(s) to exclude patterns: ${newPatterns.join(", ")}`
-      );
+    if (binaryFiles.size > 0) {
+      const updatedPatterns = [...new Set([...this.config.excludePatterns, ...binaryFiles])];
+      await this.configManager.saveWorkspaceConfig({ excludePatterns: updatedPatterns });
       this.config = await this.configManager.getConfig();
+      this.outputChannel.appendLine(
+        `Added ${binaryFiles.size} binary file(s) to exclude patterns: ${[...binaryFiles].join(", ")}`
+      );
     }
 
     return result;
