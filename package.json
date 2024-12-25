@@ -1,7 +1,7 @@
 {
   "name": "claudesync",
   "displayName": "ClaudeSync",
-  "description": "",
+  "description": "Sync your code with Claude AI assistant",
   "version": "0.0.1",
   "engines": {
     "vscode": "^1.96.0"
@@ -14,10 +14,51 @@
   "contributes": {
     "commands": [
       {
-        "command": "claudesync.helloWorld",
-        "title": "Hello World"
+        "command": "claudesync.setToken",
+        "title": "ClaudeSync: Set Session Token"
+      },
+      {
+        "command": "claudesync.initProject",
+        "title": "ClaudeSync: Initialize Project"
+      },
+      {
+        "command": "claudesync.syncCurrentFile",
+        "title": "ClaudeSync: Sync Current File"
+      },
+      {
+        "command": "claudesync.syncSelected",
+        "title": "ClaudeSync: Sync Selected Files"
       }
-    ]
+    ],
+    "menus": {
+      "explorer/context": [
+        {
+          "command": "claudesync.syncSelected",
+          "group": "claudesync",
+          "when": "explorerViewletVisible"
+        }
+      ],
+      "editor/context": [
+        {
+          "command": "claudesync.syncCurrentFile",
+          "group": "claudesync",
+          "when": "editorTextFocus"
+        }
+      ]
+    },
+    "configuration": {
+      "title": "ClaudeSync",
+      "properties": {
+        "claudesync.organizationId": {
+          "type": "string",
+          "description": "Claude AI organization ID"
+        },
+        "claudesync.projectId": {
+          "type": "string",
+          "description": "Claude AI project ID"
+        }
+      }
+    }
   },
   "scripts": {
     "vscode:prepublish": "pnpm run package",
@@ -32,6 +73,9 @@
     "check-types": "tsc --noEmit",
     "lint": "eslint src",
     "test": "vscode-test"
+  },
+  "dependencies": {
+    "axios": "^1.6.2"
   },
   "devDependencies": {
     "@types/mocha": "^10.0.10",
