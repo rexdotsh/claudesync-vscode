@@ -27,18 +27,12 @@
       {
         "command": "claudesync.syncCurrentFile",
         "title": "ClaudeSync: Sync Current File",
-        "icon": {
-          "light": "resources/sync-light.svg",
-          "dark": "resources/sync-dark.svg"
-        }
+        "icon": "resources/sync.svg"
       },
       {
         "command": "claudesync.syncWorkspace",
         "title": "ClaudeSync: Sync Workspace",
-        "icon": {
-          "light": "resources/project-light.svg",
-          "dark": "resources/project-dark.svg"
-        }
+        "icon": "resources/project.svg"
       },
       {
         "command": "claudesync.syncProjectInstructions",
