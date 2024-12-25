@@ -74,11 +74,16 @@ export class SyncManager {
 
       // Save project info in config
       this.outputChannel.appendLine("Saving project configuration...");
-      await vscode.workspace.getConfiguration().update(
+      const config = vscode.workspace.getConfiguration();
+      await config.update(
         "claudesync",
         {
           organizationId: this.currentOrg.id,
           projectId: this.currentProject.id,
+          sessionToken: this.config.sessionToken,
+          excludePatterns: this.config.excludePatterns,
+          maxTokens: this.config.maxTokens,
+          maxFileSize: this.config.maxFileSize,
         },
         vscode.ConfigurationTarget.Workspace
       );
