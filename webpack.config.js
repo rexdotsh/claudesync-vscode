@@ -42,6 +42,9 @@ const config = {
         use: [
           {
             loader: "ts-loader",
+            options: {
+              transpileOnly: true, // faster compilation in watch mode
+            },
           },
         ],
       },

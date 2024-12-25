@@ -5,53 +5,58 @@
   "tasks": [
     {
       "label": "watch",
-      "dependsOn": ["npm: watch:tsc", "npm: watch:esbuild"],
+      "dependsOn": ["pnpm: watch:tsc", "pnpm: watch:esbuild"],
       "presentation": {
         "reveal": "never"
       },
       "group": {
         "kind": "build",
         "isDefault": true
-      }
+      },
+      "problemMatcher": []
     },
     {
-      "type": "npm",
-      "script": "watch:esbuild",
+      "type": "shell",
+      "command": "pnpm",
+      "args": ["run", "watch:esbuild"],
       "group": "build",
       "problemMatcher": "$esbuild-watch",
       "isBackground": true,
-      "label": "npm: watch:esbuild",
+      "label": "pnpm: watch:esbuild",
       "presentation": {
         "group": "watch",
         "reveal": "never"
       }
     },
     {
-      "type": "npm",
-      "script": "watch:tsc",
+      "type": "shell",
+      "command": "pnpm",
+      "args": ["run", "watch:tsc"],
       "group": "build",
       "problemMatcher": "$tsc-watch",
       "isBackground": true,
-      "label": "npm: watch:tsc",
+      "label": "pnpm: watch:tsc",
       "presentation": {
         "group": "watch",
         "reveal": "never"
       }
     },
     {
-      "type": "npm",
-      "script": "watch-tests",
+      "type": "shell",
+      "command": "pnpm",
+      "args": ["run", "watch-tests"],
       "problemMatcher": "$tsc-watch",
       "isBackground": true,
       "presentation": {
         "reveal": "never",
         "group": "watchers"
       },
-      "group": "build"
+      "group": "build",
+      "label": "pnpm: watch-tests"
     },
     {
       "label": "tasks: watch-tests",
-      "dependsOn": ["npm: watch", "npm: watch-tests"],
+      "dependsOn": ["pnpm: watch", "pnpm: watch-tests"],
       "problemMatcher": []
     }
   ]
