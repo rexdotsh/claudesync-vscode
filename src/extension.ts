@@ -167,7 +167,53 @@ export async function activate(context: vscode.ExtensionContext) {
     }
   );
 
-  context.subscriptions.push(setTokenCommand, initProjectCommand, syncCurrentFileCommand, syncSelectedCommand);
+  // Command to sync project instructions
+  const syncProjectInstructionsCommand = vscode.commands.registerCommand(
+    "claudesync.syncProjectInstructions",
+    async () => {
+      const config = await configManager.getConfig();
+      if (!config.sessionToken) {
+        const setToken = await vscode.window.showErrorMessage(
+          "Please set your Claude session token first",
+          "Set Token"
+        );
+        if (setToken) {
+          await vscode.commands.executeCommand("claudesync.setToken");
+          return;
+        }
+        return;
+      }
+
+      try {
+        const result = await syncManager.syncProjectInstructions();
+        if (result.success) {
+          vscode.window.showInformationMessage(result.message);
+          outputChannel.appendLine(result.message);
+        } else {
+          const errorMsg = result.error ? `${result.message}: ${result.error.message}` : result.message;
+          outputChannel.appendLine(`Failed to sync project instructions: ${errorMsg}`);
+          vscode.window.showErrorMessage(errorMsg);
+        }
+      } catch (error) {
+        const errorMsg = `Failed to sync project instructions: ${
+          error instanceof Error ? error.message : String(error)
+        }`;
+        outputChannel.appendLine(`Error: ${errorMsg}`);
+        if (error instanceof Error && error.stack) {
+          outputChannel.appendLine(`Stack trace: ${error.stack}`);
+        }
+        vscode.window.showErrorMessage(errorMsg);
+      }
+    }
+  );
+
+  context.subscriptions.push(
+    setTokenCommand,
+    initProjectCommand,
+    syncCurrentFileCommand,
+    syncSelectedCommand,
+    syncProjectInstructionsCommand
+  );
 }
 
 export function deactivate() {

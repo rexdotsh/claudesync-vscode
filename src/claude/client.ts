@@ -167,4 +167,10 @@ export class ClaudeClient {
     await this.makeRequest<void>("DELETE", `/organizations/${organizationId}/projects/${projectId}/docs/${fileUuid}`);
     console.log(`Deleted file ${fileUuid}`);
   }
+
+  async updateProjectPromptTemplate(organizationId: string, projectId: string, promptTemplate: string): Promise<void> {
+    await this.makeRequest<void>("PUT", `/organizations/${organizationId}/projects/${projectId}`, {
+      prompt_template: promptTemplate,
+    });
+  }
 }
