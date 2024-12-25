@@ -36,6 +36,10 @@
       {
         "command": "claudesync.syncProjectInstructions",
         "title": "ClaudeSync: Sync Project Instructions"
+      },
+      {
+        "command": "claudesync.syncWorkspace",
+        "title": "ClaudeSync: Sync Entire Workspace"
       }
     ],
     "menus": {

@@ -16,6 +16,45 @@ export async function activate(context: vscode.ExtensionContext) {
   };
   await updateSyncManager();
 
+  async function syncFiles(files: vscode.Uri[]) {
+    const config = await configManager.getConfig();
+    if (!config.sessionToken) {
+      const setToken = await vscode.window.showErrorMessage("Please set your Claude session token first", "Set Token");
+      if (setToken) {
+        await vscode.commands.executeCommand("claudesync.setToken");
+        return;
+      }
+      return;
+    }
+
+    try {
+      outputChannel.appendLine(`Syncing ${files.length} files...`);
+      const result = await syncManager.syncFiles(files);
+      if (result.success) {
+        vscode.window.showInformationMessage(result.message);
+        outputChannel.appendLine(`Files synced successfully: ${result.message}`);
+      } else {
+        if (result.message.includes("Project not initialized")) {
+          const init = await vscode.window.showErrorMessage(result.message, "Initialize Project");
+          if (init) {
+            await vscode.commands.executeCommand("claudesync.initProject");
+          }
+        } else {
+          const errorMsg = result.error ? `${result.message}: ${result.error.message}` : result.message;
+          outputChannel.appendLine(`Failed to sync files: ${errorMsg}`);
+          vscode.window.showErrorMessage(errorMsg);
+        }
+      }
+    } catch (error) {
+      const errorMsg = `Failed to sync files: ${error instanceof Error ? error.message : String(error)}`;
+      outputChannel.appendLine(`Error: ${errorMsg}`);
+      if (error instanceof Error && error.stack) {
+        outputChannel.appendLine(`Stack trace: ${error.stack}`);
+      }
+      vscode.window.showErrorMessage(errorMsg);
+    }
+  }
+
   // command to set Claude session token
   const setTokenCommand = vscode.commands.registerCommand("claudesync.setToken", async () => {
     const token = await vscode.window.showInputBox({
@@ -76,41 +115,27 @@ export async function activate(context: vscode.ExtensionContext) {
       vscode.window.showErrorMessage("No active file to sync");
       return;
     }
+    await syncFiles([editor.document.uri]);
+  });
 
-    const config = await configManager.getConfig();
-    if (!config.sessionToken) {
-      const setToken = await vscode.window.showErrorMessage("Please set your Claude session token first", "Set Token");
-      if (setToken) {
-        await vscode.commands.executeCommand("claudesync.setToken");
-        return;
-      }
+  // command to sync entire workspace
+  const syncWorkspaceCommand = vscode.commands.registerCommand("claudesync.syncWorkspace", async () => {
+    const workspaceFolder = vscode.workspace.workspaceFolders?.[0];
+    if (!workspaceFolder) {
+      vscode.window.showErrorMessage("No workspace folder found");
       return;
     }
 
     try {
-      outputChannel.appendLine(`Syncing file: ${editor.document.fileName}`);
-      const result = await syncManager.syncFiles([editor.document.uri]);
-      if (result.success) {
-        vscode.window.showInformationMessage(result.message);
-        outputChannel.appendLine(`File synced successfully: ${result.message}`);
-      } else {
-        if (result.message.includes("Project not initialized")) {
-          const init = await vscode.window.showErrorMessage(result.message, "Initialize Project");
-          if (init) {
-            await vscode.commands.executeCommand("claudesync.initProject");
-          }
-        } else {
-          const errorMsg = result.error ? `${result.message}: ${result.error.message}` : result.message;
-          outputChannel.appendLine(`Failed to sync file: ${errorMsg}`);
-          vscode.window.showErrorMessage(errorMsg);
-        }
-      }
+      const config = await configManager.getConfig();
+      // always exclude node_modules, and any patterns in the config
+      const excludePatterns = ["**/node_modules/**", ...(config.excludePatterns || [])];
+      outputChannel.appendLine(`Using exclude patterns: ${excludePatterns.join(", ")}`);
+
+      const files = await vscode.workspace.findFiles("**/*", `{${excludePatterns.join(",")}}`);
+      await syncFiles(files);
     } catch (error) {
-      const errorMsg = `Failed to sync file: ${error instanceof Error ? error.message : String(error)}`;
-      outputChannel.appendLine(`Error: ${errorMsg}`);
-      if (error instanceof Error && error.stack) {
-        outputChannel.appendLine(`Stack trace: ${error.stack}`);
-      }
+      const errorMsg = `Failed to sync workspace: ${error instanceof Error ? error.message : String(error)}`;
       vscode.window.showErrorMessage(errorMsg);
     }
   });
@@ -212,7 +237,8 @@ export async function activate(context: vscode.ExtensionContext) {
     initProjectCommand,
     syncCurrentFileCommand,
     syncSelectedCommand,
-    syncProjectInstructionsCommand
+    syncProjectInstructionsCommand,
+    syncWorkspaceCommand
   );
 }
 
