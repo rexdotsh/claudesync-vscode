@@ -14,6 +14,9 @@ export class SyncManager {
   private configManager: ConfigManager;
   private gitignoreManager: GitignoreManager;
 
+  private readonly MAX_RETRIES = 10;
+  private readonly RETRY_DELAY = 2000; // 2s
+
   constructor(config: ClaudeSyncConfig, outputChannel: vscode.OutputChannel, configManager: ConfigManager) {
     this.config = config;
     this.outputChannel = outputChannel;
@@ -123,51 +126,89 @@ export class SyncManager {
 
   public async initializeProject(): Promise<SyncResult> {
     return this.handleError("initialize project", async () => {
-      const orgs = await this.claudeClient.getOrganizations();
-      if (!orgs.length) {
-        return {
-          success: false,
-          message: "No organizations found. Please make sure you have access to Claude",
-        };
-      }
+      let retryCount = 0;
+      
+      return vscode.window.withProgress(
+        {
+          location: vscode.ProgressLocation.Notification,
+          title: "Initializing Claude Project",
+          cancellable: false,
+        },
+        async (progress) => {
+          while (retryCount < this.MAX_RETRIES) {
+            try {
+              progress.report({ message: "Getting organizations..." });
+              const orgs = await this.claudeClient.getOrganizations();
+              if (!orgs.length) {
+                return {
+                  success: false,
+                  message: "No organizations found. Please make sure you have access to Claude",
+                };
+              }
 
-      this.currentOrg = orgs.length === 1 ? orgs[0] : await this.selectOrganization(orgs);
-      if (!this.currentOrg) {
-        return { success: false, message: "No organization selected" };
-      }
+              progress.report({ message: "Selecting organization..." });
+              this.currentOrg = orgs.length === 1 ? orgs[0] : await this.selectOrganization(orgs);
+              if (!this.currentOrg) {
+                return { success: false, message: "No organization selected" };
+              }
 
-      const workspaceFolder = vscode.workspace.workspaceFolders?.[0];
-      if (!workspaceFolder) {
-        return { success: false, message: "No workspace folder found" };
-      }
+              const workspaceFolder = vscode.workspace.workspaceFolders?.[0];
+              if (!workspaceFolder) {
+                return { success: false, message: "No workspace folder found" };
+              }
 
-      const projectName = workspaceFolder.name;
-      const projects = await this.claudeClient.getProjects(this.currentOrg.id);
-      this.currentProject = projects.find((p) => p.name === projectName);
+              const projectName = workspaceFolder.name;
+              progress.report({ message: "Getting projects..." });
+              const projects = await this.claudeClient.getProjects(this.currentOrg.id);
+              this.currentProject = projects.find((p) => p.name === projectName);
 
-      let successMessage: string;
-      if (!this.currentProject) {
-        this.currentProject = await this.claudeClient.createProject(
-          this.currentOrg.id,
-          projectName,
-          "Created by ClaudeSync from VSCode"
-        );
-        successMessage = `Project '${projectName}' has been successfully created with Claude!`;
-      } else {
-        successMessage = `Project '${projectName}' already exists.`;
-      }
+              let successMessage: string;
+              if (!this.currentProject) {
+                progress.report({ message: "Creating new project..." });
+                this.currentProject = await this.claudeClient.createProject(
+                  this.currentOrg.id,
+                  projectName,
+                  "Created by ClaudeSync from VSCode"
+                );
+                successMessage = `Project '${projectName}' has been successfully created with Claude!`;
+              } else {
+                successMessage = `Project '${projectName}' already exists.`;
+              }
 
-      await this.updateProjectInstructions();
+              progress.report({ message: "Updating project instructions..." });
+              await this.updateProjectInstructions();
 
-      await this.configManager.saveWorkspaceConfig({
-        organizationId: this.currentOrg.id,
-        projectId: this.currentProject.id,
-      });
+              progress.report({ message: "Saving configuration..." });
+              await this.configManager.saveWorkspaceConfig({
+                organizationId: this.currentOrg.id,
+                projectId: this.currentProject.id,
+              });
 
-      return {
-        success: true,
-        message: successMessage,
-      };
+              return {
+                success: true,
+                message: successMessage,
+              };
+
+            } catch (error) {
+              retryCount++;
+              if (retryCount === this.MAX_RETRIES) {
+                throw error;
+              }
+              
+              progress.report({ 
+                message: `Attempt ${retryCount} failed. Retrying in ${this.RETRY_DELAY/1000}s...` 
+              });
+              
+              await new Promise(resolve => setTimeout(resolve, this.RETRY_DELAY));
+            }
+          }
+
+          return {
+            success: false,
+            message: "Failed to initialize project after maximum retries",
+          };
+        }
+      );
     });
   }
 
