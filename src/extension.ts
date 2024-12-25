@@ -4,16 +4,23 @@ import * as vscode from "vscode";
 import { ConfigManager } from "./config";
 import { SyncManager } from "./syncManager";
 
+let outputChannel: vscode.OutputChannel;
+
 // This method is called when your extension is activated
 // Your extension is activated the very first time the command is executed
 export async function activate(context: vscode.ExtensionContext) {
+  // Create output channel
+  outputChannel = vscode.window.createOutputChannel("ClaudeSync");
+  outputChannel.show();
+
   const configManager = new ConfigManager(context);
   let syncManager: SyncManager;
 
   // Initialize sync manager with config
   const updateSyncManager = async () => {
     const config = await configManager.getConfig();
-    syncManager = new SyncManager(config);
+    outputChannel.appendLine(`Config loaded: ${JSON.stringify(config, null, 2)}`);
+    syncManager = new SyncManager(config, outputChannel);
   };
   await updateSyncManager();
 
@@ -33,13 +40,15 @@ export async function activate(context: vscode.ExtensionContext) {
 
     if (token) {
       try {
+        outputChannel.appendLine("Saving new session token...");
         await configManager.saveConfig({ sessionToken: token });
         await updateSyncManager();
         vscode.window.showInformationMessage("Claude session token updated successfully");
+        outputChannel.appendLine("Session token saved successfully");
       } catch (error) {
-        vscode.window.showErrorMessage(
-          `Failed to save token: ${error instanceof Error ? error.message : String(error)}`
-        );
+        const errorMsg = `Failed to save token: ${error instanceof Error ? error.message : String(error)}`;
+        outputChannel.appendLine(`Error: ${errorMsg}`);
+        vscode.window.showErrorMessage(errorMsg);
       }
     }
   });
@@ -47,6 +56,9 @@ export async function activate(context: vscode.ExtensionContext) {
   // Command to initialize project
   const initProjectCommand = vscode.commands.registerCommand("claudesync.initProject", async () => {
     const config = await configManager.getConfig();
+    outputChannel.appendLine("Initializing project...");
+    outputChannel.appendLine(`Current config: ${JSON.stringify(config, null, 2)}`);
+
     if (!config.sessionToken) {
       const setToken = await vscode.window.showErrorMessage("Please set your Claude session token first", "Set Token");
       if (setToken) {
@@ -60,13 +72,19 @@ export async function activate(context: vscode.ExtensionContext) {
       const result = await syncManager.initializeProject();
       if (result.success) {
         vscode.window.showInformationMessage(result.message);
+        outputChannel.appendLine(`Project initialized successfully: ${result.message}`);
       } else {
-        vscode.window.showErrorMessage(result.message);
+        const errorMsg = result.error ? `${result.message}: ${result.error.message}` : result.message;
+        outputChannel.appendLine(`Failed to initialize project: ${errorMsg}`);
+        vscode.window.showErrorMessage(errorMsg);
       }
     } catch (error) {
-      vscode.window.showErrorMessage(
-        `Failed to initialize project: ${error instanceof Error ? error.message : String(error)}`
-      );
+      const errorMsg = `Failed to initialize project: ${error instanceof Error ? error.message : String(error)}`;
+      outputChannel.appendLine(`Error: ${errorMsg}`);
+      if (error instanceof Error && error.stack) {
+        outputChannel.appendLine(`Stack trace: ${error.stack}`);
+      }
+      vscode.window.showErrorMessage(errorMsg);
     }
   });
 
@@ -89,9 +107,11 @@ export async function activate(context: vscode.ExtensionContext) {
     }
 
     try {
+      outputChannel.appendLine(`Syncing file: ${editor.document.fileName}`);
       const result = await syncManager.syncFiles([editor.document.uri]);
       if (result.success) {
         vscode.window.showInformationMessage(result.message);
+        outputChannel.appendLine(`File synced successfully: ${result.message}`);
       } else {
         if (result.message.includes("Project not initialized")) {
           const init = await vscode.window.showErrorMessage(result.message, "Initialize Project");
@@ -99,11 +119,18 @@ export async function activate(context: vscode.ExtensionContext) {
             await vscode.commands.executeCommand("claudesync.initProject");
           }
         } else {
-          vscode.window.showErrorMessage(result.message);
+          const errorMsg = result.error ? `${result.message}: ${result.error.message}` : result.message;
+          outputChannel.appendLine(`Failed to sync file: ${errorMsg}`);
+          vscode.window.showErrorMessage(errorMsg);
         }
       }
     } catch (error) {
-      vscode.window.showErrorMessage(`Failed to sync file: ${error instanceof Error ? error.message : String(error)}`);
+      const errorMsg = `Failed to sync file: ${error instanceof Error ? error.message : String(error)}`;
+      outputChannel.appendLine(`Error: ${errorMsg}`);
+      if (error instanceof Error && error.stack) {
+        outputChannel.appendLine(`Stack trace: ${error.stack}`);
+      }
+      vscode.window.showErrorMessage(errorMsg);
     }
   });
 
@@ -131,9 +158,11 @@ export async function activate(context: vscode.ExtensionContext) {
       }
 
       try {
+        outputChannel.appendLine(`Syncing files: ${filesToSync.map((f) => f.fsPath).join(", ")}`);
         const result = await syncManager.syncFiles(filesToSync);
         if (result.success) {
           vscode.window.showInformationMessage(result.message);
+          outputChannel.appendLine(`Files synced successfully: ${result.message}`);
         } else {
           if (result.message.includes("Project not initialized")) {
             const init = await vscode.window.showErrorMessage(result.message, "Initialize Project");
@@ -141,13 +170,18 @@ export async function activate(context: vscode.ExtensionContext) {
               await vscode.commands.executeCommand("claudesync.initProject");
             }
           } else {
-            vscode.window.showErrorMessage(result.message);
+            const errorMsg = result.error ? `${result.message}: ${result.error.message}` : result.message;
+            outputChannel.appendLine(`Failed to sync files: ${errorMsg}`);
+            vscode.window.showErrorMessage(errorMsg);
           }
         }
       } catch (error) {
-        vscode.window.showErrorMessage(
-          `Failed to sync files: ${error instanceof Error ? error.message : String(error)}`
-        );
+        const errorMsg = `Failed to sync files: ${error instanceof Error ? error.message : String(error)}`;
+        outputChannel.appendLine(`Error: ${errorMsg}`);
+        if (error instanceof Error && error.stack) {
+          outputChannel.appendLine(`Stack trace: ${error.stack}`);
+        }
+        vscode.window.showErrorMessage(errorMsg);
       }
     }
   );
@@ -156,4 +190,8 @@ export async function activate(context: vscode.ExtensionContext) {
 }
 
 // This method is called when your extension is deactivated
-export function deactivate() {}
+export function deactivate() {
+  if (outputChannel) {
+    outputChannel.dispose();
+  }
+}

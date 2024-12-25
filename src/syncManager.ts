@@ -8,16 +8,22 @@ export class SyncManager {
   private claudeClient: ClaudeClient;
   private currentOrg?: Organization;
   private currentProject?: Project;
+  private outputChannel: vscode.OutputChannel;
 
-  constructor(config: ClaudeSyncConfig) {
+  constructor(config: ClaudeSyncConfig, outputChannel: vscode.OutputChannel) {
     this.config = config;
+    this.outputChannel = outputChannel;
     this.claudeClient = new ClaudeClient(config);
+    this.outputChannel.appendLine("SyncManager initialized");
   }
 
   public async initializeProject(): Promise<SyncResult> {
     try {
+      this.outputChannel.appendLine("Getting organizations...");
       // Get organizations
       const orgs = await this.claudeClient.getOrganizations();
+      this.outputChannel.appendLine(`Found ${orgs.length} organizations`);
+
       if (!orgs.length) {
         return {
           success: false,
@@ -33,6 +39,7 @@ export class SyncManager {
           message: "No organization selected",
         };
       }
+      this.outputChannel.appendLine(`Selected organization: ${this.currentOrg.name} (${this.currentOrg.id})`);
 
       // Get workspace name for project
       const workspaceFolder = vscode.workspace.workspaceFolders?.[0];
@@ -44,20 +51,29 @@ export class SyncManager {
       }
 
       const projectName = workspaceFolder.name;
+      this.outputChannel.appendLine(`Using project name: ${projectName}`);
 
       // Create or select project
+      this.outputChannel.appendLine("Getting projects...");
       const projects = await this.claudeClient.getProjects(this.currentOrg.id);
+      this.outputChannel.appendLine(`Found ${projects.length} projects`);
+
       this.currentProject = projects.find((p) => p.name === projectName);
 
       if (!this.currentProject) {
+        this.outputChannel.appendLine(`Creating new project: ${projectName}`);
         this.currentProject = await this.claudeClient.createProject(
           this.currentOrg.id,
           projectName,
           "Created by ClaudeSync VSCode Extension"
         );
+        this.outputChannel.appendLine(`Project created with ID: ${this.currentProject.id}`);
+      } else {
+        this.outputChannel.appendLine(`Using existing project with ID: ${this.currentProject.id}`);
       }
 
       // Save project info in config
+      this.outputChannel.appendLine("Saving project configuration...");
       await vscode.workspace.getConfiguration().update(
         "claudesync",
         {
@@ -72,6 +88,12 @@ export class SyncManager {
         message: `Project '${projectName}' initialized with Claude AI`,
       };
     } catch (error) {
+      this.outputChannel.appendLine(
+        `Error in initializeProject: ${error instanceof Error ? error.message : String(error)}`
+      );
+      if (error instanceof Error && error.stack) {
+        this.outputChannel.appendLine(`Stack trace: ${error.stack}`);
+      }
       return {
         success: false,
         message: "Failed to initialize project",
@@ -84,6 +106,7 @@ export class SyncManager {
     try {
       // Load org and project from config if not set
       if (!this.currentOrg || !this.currentProject) {
+        this.outputChannel.appendLine("Loading organization and project from config...");
         const config = vscode.workspace.getConfiguration("claudesync");
         const orgId = config.get<string>("organizationId");
         const projectId = config.get<string>("projectId");
@@ -114,9 +137,14 @@ export class SyncManager {
             message: "Project not found. Please reinitialize the project",
           };
         }
+
+        this.outputChannel.appendLine(
+          `Loaded organization: ${this.currentOrg.name} and project: ${this.currentProject.name}`
+        );
       }
 
       // Prepare files
+      this.outputChannel.appendLine("Preparing files for sync...");
       const fileContents = await this.prepareFiles(files);
       if (!fileContents.length) {
         return {
@@ -124,9 +152,12 @@ export class SyncManager {
           message: "No valid files to sync",
         };
       }
+      this.outputChannel.appendLine(`Prepared ${fileContents.length} files for sync`);
 
       // Get existing files to determine what to update/create
+      this.outputChannel.appendLine("Getting existing files...");
       const existingFiles = await this.claudeClient.listFiles(this.currentOrg.id, this.currentProject.id);
+      this.outputChannel.appendLine(`Found ${existingFiles.length} existing files`);
 
       // Upload/update files
       const progress = await vscode.window.withProgress(
@@ -145,20 +176,26 @@ export class SyncManager {
               increment: (1 / total) * 100,
             });
 
+            this.outputChannel.appendLine(`Processing file: ${file.path}`);
             const existingFile = existingFiles.find((f) => f.file_name === file.path);
             const compressed = await CompressionUtils.compressContent(file.content);
+            this.outputChannel.appendLine(
+              `Compressed size: ${compressed.compressedSize} bytes (from ${compressed.originalSize} bytes)`
+            );
 
             if (existingFile) {
-              // Delete and recreate to update
+              this.outputChannel.appendLine(`Deleting existing file: ${existingFile.uuid}`);
               await this.claudeClient.deleteFile(this.currentOrg!.id, this.currentProject!.id, existingFile.uuid);
             }
 
+            this.outputChannel.appendLine(`Uploading file: ${file.path}`);
             await this.claudeClient.uploadFile(
               this.currentOrg!.id,
               this.currentProject!.id,
               file.path,
               compressed.content
             );
+            this.outputChannel.appendLine(`File uploaded successfully: ${file.path}`);
           }
         }
       );
@@ -168,6 +205,10 @@ export class SyncManager {
         message: `Successfully synced ${fileContents.length} files`,
       };
     } catch (error) {
+      this.outputChannel.appendLine(`Error in syncFiles: ${error instanceof Error ? error.message : String(error)}`);
+      if (error instanceof Error && error.stack) {
+        this.outputChannel.appendLine(`Stack trace: ${error.stack}`);
+      }
       return {
         success: false,
         message: "Failed to sync files",
@@ -177,6 +218,7 @@ export class SyncManager {
   }
 
   private async selectOrganization(orgs: Organization[]): Promise<Organization | undefined> {
+    this.outputChannel.appendLine("Showing organization selection dialog...");
     const selected = await vscode.window.showQuickPick(
       orgs.map((org) => ({
         label: org.name,
@@ -187,6 +229,9 @@ export class SyncManager {
         placeHolder: "Select an organization",
       }
     );
+    if (selected) {
+      this.outputChannel.appendLine(`Selected organization: ${selected.org.name} (${selected.org.id})`);
+    }
     return selected?.org;
   }
 
@@ -200,6 +245,7 @@ export class SyncManager {
 
         // Skip if file is too large
         if (content.byteLength > this.config.maxFileSize) {
+          this.outputChannel.appendLine(`Skipping ${file.fsPath}: File too large (${content.byteLength} bytes)`);
           vscode.window.showWarningMessage(`Skipping ${file.fsPath}: File too large`);
           continue;
         }
@@ -207,6 +253,7 @@ export class SyncManager {
         // Skip if file should be excluded
         const relativePath = vscode.workspace.asRelativePath(file);
         if (this.shouldExcludeFile(relativePath)) {
+          this.outputChannel.appendLine(`Skipping ${relativePath}: Matches exclude pattern`);
           continue;
         }
 
@@ -215,8 +262,11 @@ export class SyncManager {
           content: textContent,
           size: content.byteLength,
         });
+        this.outputChannel.appendLine(`Added file for sync: ${relativePath} (${content.byteLength} bytes)`);
       } catch (error) {
-        vscode.window.showErrorMessage(`Failed to read ${file.fsPath}: ${error}`);
+        const errorMsg = `Failed to read ${file.fsPath}: ${error}`;
+        this.outputChannel.appendLine(`Error: ${errorMsg}`);
+        vscode.window.showErrorMessage(errorMsg);
       }
     }
 
