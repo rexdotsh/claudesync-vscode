@@ -68,13 +68,44 @@
     "configuration": {
       "title": "ClaudeSync",
       "properties": {
-        "claudesync.organizationId": {
-          "type": "string",
-          "description": "Claude AI organization ID"
-        },
-        "claudesync.projectId": {
-          "type": "string",
-          "description": "Claude AI project ID"
+        "claudesync": {
+          "type": "object",
+          "properties": {
+            "organizationId": {
+              "type": "string",
+              "description": "Claude AI organization ID"
+            },
+            "projectId": {
+              "type": "string",
+              "description": "Claude AI project ID"
+            },
+            "sessionToken": {
+              "type": "string",
+              "description": "Claude AI session token"
+            },
+            "excludePatterns": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "default": [
+                "node_modules/**",
+                ".git/**",
+                "dist/**",
+                "build/**",
+                "**/*.pyc",
+                "**/__pycache__/**",
+                ".env",
+                ".env.*"
+              ],
+              "description": "Patterns to exclude from syncing"
+            },
+            "maxFileSize": {
+              "type": "number",
+              "default": 1048576,
+              "description": "Maximum file size in bytes (default: 1MB)"
+            }
+          }
         }
       }
     }
