@@ -1,5 +1,6 @@
 import * as vscode from "vscode";
 import { ClaudeClient, Organization, Project } from "./claude/client";
+import { ConfigManager } from "./config";
 import { ClaudeSyncConfig, FileContent, SyncResult } from "./types";
 import { computeSHA256Hash } from "./utils";
 
@@ -9,11 +10,13 @@ export class SyncManager {
   private currentOrg?: Organization;
   private currentProject?: Project;
   private outputChannel: vscode.OutputChannel;
+  private configManager: ConfigManager;
 
-  constructor(config: ClaudeSyncConfig, outputChannel: vscode.OutputChannel) {
+  constructor(config: ClaudeSyncConfig, outputChannel: vscode.OutputChannel, configManager: ConfigManager) {
     this.config = config;
     this.outputChannel = outputChannel;
     this.claudeClient = new ClaudeClient(config);
+    this.configManager = configManager;
   }
 
   private async handleError<T>(operation: string, action: () => Promise<T>): Promise<SyncResult & { data?: T }> {
@@ -130,18 +133,10 @@ export class SyncManager {
 
       await this.updateProjectInstructions();
 
-      const config = vscode.workspace.getConfiguration();
-      await config.update(
-        "claudesync",
-        {
-          organizationId: this.currentOrg.id,
-          projectId: this.currentProject.id,
-          sessionToken: this.config.sessionToken,
-          excludePatterns: this.config.excludePatterns,
-          maxFileSize: this.config.maxFileSize,
-        },
-        vscode.ConfigurationTarget.Workspace
-      );
+      await this.configManager.saveWorkspaceConfig({
+        organizationId: this.currentOrg.id,
+        projectId: this.currentProject.id,
+      });
 
       return { success: true, message: `Project '${projectName}' initialized with Claude!` };
     });

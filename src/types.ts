@@ -1,9 +1,15 @@
-export interface ClaudeSyncConfig {
+export interface GlobalConfig {
   sessionToken: string;
-  workspaceRoot?: string;
+}
+
+export interface WorkspaceConfig {
+  organizationId?: string;
+  projectId?: string;
   excludePatterns: string[];
   maxFileSize: number; // in bytes
 }
+
+export interface ClaudeSyncConfig extends GlobalConfig, WorkspaceConfig {}
 
 export interface FileContent {
   path: string;

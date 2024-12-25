@@ -12,7 +12,7 @@ export async function activate(context: vscode.ExtensionContext) {
 
   const updateSyncManager = async () => {
     const config = await configManager.getConfig();
-    syncManager = new SyncManager(config, outputChannel);
+    syncManager = new SyncManager(config, outputChannel, configManager);
   };
   await updateSyncManager();
 
@@ -32,7 +32,7 @@ export async function activate(context: vscode.ExtensionContext) {
 
     if (token) {
       try {
-        await configManager.saveConfig({ sessionToken: token });
+        await configManager.saveGlobalConfig({ sessionToken: token });
         await updateSyncManager();
         vscode.window.showInformationMessage("Claude session token updated successfully");
       } catch (error) {

@@ -79,10 +79,6 @@
               "type": "string",
               "description": "Claude AI project ID"
             },
-            "sessionToken": {
-              "type": "string",
-              "description": "Claude AI session token"
-            },
             "excludePatterns": {
               "type": "array",
               "items": {

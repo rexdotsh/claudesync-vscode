@@ -1,8 +1,8 @@
 import * as vscode from "vscode";
-import { ClaudeSyncConfig } from "./types";
+import { ClaudeSyncConfig, GlobalConfig, WorkspaceConfig } from "./types";
 
 export class ConfigManager {
-  private static readonly CONFIG_KEY = "claudeSync";
+  private static readonly GLOBAL_CONFIG_KEY = "claudeSync.global";
   private context: vscode.ExtensionContext;
 
   constructor(context: vscode.ExtensionContext) {
@@ -10,34 +10,48 @@ export class ConfigManager {
   }
 
   public async getConfig(): Promise<ClaudeSyncConfig> {
-    const config = this.context.globalState.get<ClaudeSyncConfig>(ConfigManager.CONFIG_KEY);
-    return config || this.getDefaultConfig();
+    const globalConfig = await this.getGlobalConfig();
+    const workspaceConfig = this.getWorkspaceConfig();
+    return { ...globalConfig, ...workspaceConfig };
   }
 
-  public async saveConfig(config: Partial<ClaudeSyncConfig>): Promise<void> {
-    const currentConfig = await this.getConfig();
+  public async saveGlobalConfig(config: Partial<GlobalConfig>): Promise<void> {
+    const currentConfig = await this.getGlobalConfig();
     const newConfig = { ...currentConfig, ...config };
-    await this.context.globalState.update(ConfigManager.CONFIG_KEY, newConfig);
+    await this.context.globalState.update(ConfigManager.GLOBAL_CONFIG_KEY, newConfig);
+  }
+
+  public async saveWorkspaceConfig(config: Partial<WorkspaceConfig>): Promise<void> {
+    const vsConfig = vscode.workspace.getConfiguration();
+    await vsConfig.update(
+      "claudesync",
+      { ...this.getWorkspaceConfig(), ...config },
+      vscode.ConfigurationTarget.Workspace
+    );
   }
 
   public async clearConfig(): Promise<void> {
-    await this.context.globalState.update(ConfigManager.CONFIG_KEY, undefined);
+    await this.context.globalState.update(ConfigManager.GLOBAL_CONFIG_KEY, undefined);
+    const vsConfig = vscode.workspace.getConfiguration();
+    await vsConfig.update("claudesync", undefined, vscode.ConfigurationTarget.Workspace);
   }
 
-  private getDefaultConfig(): ClaudeSyncConfig {
+  private async getGlobalConfig(): Promise<GlobalConfig> {
+    const config = this.context.globalState.get<GlobalConfig>(ConfigManager.GLOBAL_CONFIG_KEY);
+    return config || { sessionToken: "" };
+  }
+
+  private getWorkspaceConfig(): WorkspaceConfig {
+    const config = vscode.workspace.getConfiguration("claudesync");
     return {
-      sessionToken: "",
-      excludePatterns: [
-        "node_modules/**",
-        ".git/**",
-        "dist/**",
-        "build/**",
-        "**/*.pyc",
-        "**/__pycache__/**",
-        ".env",
-        ".env.*",
-      ],
-      maxFileSize: 1024 * 1024, // 1MB
+      organizationId: config.get("organizationId"),
+      projectId: config.get("projectId"),
+      excludePatterns: config.get("excludePatterns") || this.getDefaultExcludePatterns(),
+      maxFileSize: config.get("maxFileSize") || 1024 * 1024, // 1MB default
     };
+  }
+
+  private getDefaultExcludePatterns(): string[] {
+    return ["node_modules/**", ".git/**", "dist/**", "build/**", "**/*.pyc", "**/__pycache__/**", ".env", ".env.*"];
   }
 }
