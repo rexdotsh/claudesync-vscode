@@ -30,30 +30,19 @@
         }
       },
       {
-        "command": "claudesync.syncSelected",
-        "title": "ClaudeSync: Sync Selected Files"
-      },
-      {
-        "command": "claudesync.syncProjectInstructions",
-        "title": "ClaudeSync: Sync Project Instructions"
-      },
-      {
         "command": "claudesync.syncWorkspace",
         "title": "ClaudeSync: Sync Workspace",
         "icon": {
           "light": "resources/project-light.svg",
           "dark": "resources/project-dark.svg"
         }
+      },
+      {
+        "command": "claudesync.syncProjectInstructions",
+        "title": "ClaudeSync: Sync Project Instructions"
       }
     ],
     "menus": {
-      "explorer/context": [
-        {
-          "command": "claudesync.syncSelected",
-          "group": "claudesync",
-          "when": "explorerViewletVisible"
-        }
-      ],
       "editor/context": [
         {
           "command": "claudesync.syncCurrentFile",
