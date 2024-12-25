@@ -158,14 +158,11 @@ export class ClaudeClient {
       `/organizations/${organizationId}/projects/${projectId}/docs`,
       data
     );
-    console.log(`Uploaded file with UUID ${response.uuid}`);
     return response;
   }
 
   async deleteFile(organizationId: string, projectId: string, fileUuid: string): Promise<void> {
-    console.log(`Deleting file ${fileUuid} from project ${projectId}`);
     await this.makeRequest<void>("DELETE", `/organizations/${organizationId}/projects/${projectId}/docs/${fileUuid}`);
-    console.log(`Deleted file ${fileUuid}`);
   }
 
   async updateProjectPromptTemplate(organizationId: string, projectId: string, promptTemplate: string): Promise<void> {
