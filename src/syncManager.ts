@@ -41,6 +41,9 @@ export class SyncManager {
   private async handleError<T>(operation: string, action: () => Promise<T>): Promise<SyncResult> {
     try {
       const result = await action();
+      if (typeof result === "object" && result !== null && "success" in result) {
+        return result as SyncResult;
+      }
       return { success: true, data: result };
     } catch (error) {
       this.outputChannel.appendLine(`Error in ${operation}: ${error instanceof Error ? error.message : String(error)}`);
@@ -142,12 +145,16 @@ export class SyncManager {
       const projects = await this.claudeClient.getProjects(this.currentOrg.id);
       this.currentProject = projects.find((p) => p.name === projectName);
 
+      let successMessage: string;
       if (!this.currentProject) {
         this.currentProject = await this.claudeClient.createProject(
           this.currentOrg.id,
           projectName,
           "Created by ClaudeSync VSCode Extension"
         );
+        successMessage = `Project '${projectName}' has been successfully created with Claude!`;
+      } else {
+        successMessage = `Project '${projectName}' already exists.`;
       }
 
       await this.updateProjectInstructions();
@@ -159,7 +166,7 @@ export class SyncManager {
 
       return {
         success: true,
-        message: `Project '${projectName}' has been successfully initialized and configured with Claude`,
+        message: successMessage,
       };
     });
   }

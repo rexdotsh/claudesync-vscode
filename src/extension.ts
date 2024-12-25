@@ -9,24 +9,26 @@ export async function activate(context: vscode.ExtensionContext) {
 
   const configManager = new ConfigManager(context, outputChannel);
   let syncManager: SyncManager;
-
-  const updateSyncManager = async () => {
-    const config = await configManager.getConfig();
-    syncManager = new SyncManager(config, outputChannel, configManager);
-
-    // sync workspace on startup if enabled and project is initialized
-    const isInitialized = await syncManager.isProjectInitialized();
-    if (isInitialized && config.sessionToken && config.syncOnStartup) {
-      vscode.commands.executeCommand("claudesync.syncWorkspace");
-    }
-  };
-  await updateSyncManager();
+  let fileWatcher: vscode.FileSystemWatcher | undefined;
 
   // function to handle file changes for autosync
   let autoSyncTimer: NodeJS.Timeout | undefined;
   const handleFileChange = async (uri: vscode.Uri) => {
     const config = await configManager.getConfig();
     if (!config.autoSync || !config.sessionToken) {
+      return;
+    }
+
+    // don't sync if file is in excluded patterns
+    const relativePath = vscode.workspace.asRelativePath(uri);
+    const excludePatterns = config.excludePatterns || [];
+    if (
+      excludePatterns.some((pattern) => {
+        // convert glob pattern to regex
+        const regexPattern = pattern.replace(/\*\*/g, ".*").replace(/\*/g, "[^/]*").replace(/\?/g, ".");
+        return new RegExp(`^${regexPattern}$`).test(relativePath);
+      })
+    ) {
       return;
     }
 
@@ -41,10 +43,43 @@ export async function activate(context: vscode.ExtensionContext) {
     }, config.autoSyncDelay * 1000);
   };
 
-  // file system watcher
-  const fileWatcher = vscode.workspace.createFileSystemWatcher("**/*");
-  fileWatcher.onDidChange(handleFileChange);
-  fileWatcher.onDidCreate(handleFileChange);
+  const setupFileWatcher = async () => {
+    // Cleanup existing watcher if any
+    if (fileWatcher) {
+      fileWatcher.dispose();
+      fileWatcher = undefined;
+    }
+
+    const isInitialized = await syncManager?.isProjectInitialized();
+    const config = await configManager.getConfig();
+
+    // only setup watcher if project is initialized, has a token, and auto-sync is enabled
+    if (isInitialized && config.sessionToken && config.autoSync) {
+      // create watcher that ignores the config file and other excluded patterns
+      const excludePattern = `{**/.vscode/claudesync.json,${config.excludePatterns.join(",")}}`;
+      fileWatcher = vscode.workspace.createFileSystemWatcher(`**/*`, false, false, true);
+      fileWatcher.onDidChange(handleFileChange);
+      fileWatcher.onDidCreate(handleFileChange);
+
+      // add to disposables
+      context.subscriptions.push(fileWatcher);
+    }
+  };
+
+  const updateSyncManager = async () => {
+    const config = await configManager.getConfig();
+    syncManager = new SyncManager(config, outputChannel, configManager);
+
+    // sync workspace on startup if enabled and project is initialized
+    const isInitialized = await syncManager.isProjectInitialized();
+    if (isInitialized && config.sessionToken && config.syncOnStartup) {
+      vscode.commands.executeCommand("claudesync.syncWorkspace");
+    }
+
+    // setup file watcher based on current state
+    await setupFileWatcher();
+  };
+  await updateSyncManager();
 
   // command to configure autosync
   const configureAutoSyncCommand = vscode.commands.registerCommand(
@@ -89,6 +124,9 @@ export async function activate(context: vscode.ExtensionContext) {
         autoSyncDelay,
       });
 
+      // Update file watcher based on new auto-sync setting
+      await setupFileWatcher();
+
       vscode.window.showInformationMessage(
         `Auto-sync ${enableAutoSync === "Enable" ? "enabled" : "disabled"}${
           enableAutoSync === "Enable" ? ` with ${autoSyncDelay} seconds delay` : ""
@@ -121,13 +159,16 @@ export async function activate(context: vscode.ExtensionContext) {
     }
   );
 
+  // track last failed sync time to prevent rapid retries
+  let lastFailedSyncTime = 0;
+  const SYNC_COOLDOWN_MS = 500;
+
   async function syncFiles(files: vscode.Uri[]) {
     const config = await configManager.getConfig();
     if (!config.sessionToken) {
       const setToken = await vscode.window.showErrorMessage("Please set your Claude session token first", "Set Token");
       if (setToken) {
         await vscode.commands.executeCommand("claudesync.setToken");
-        return;
       }
       return;
     }
@@ -142,8 +183,14 @@ export async function activate(context: vscode.ExtensionContext) {
       return;
     }
 
-    // make this configurable?
-    const maxRetries = 20;
+    // Check if we're in cooldown period after a failed sync
+    const now = Date.now();
+    if (now - lastFailedSyncTime < SYNC_COOLDOWN_MS) {
+      outputChannel.appendLine("Skipping sync attempt - in cooldown period after recent failure");
+      return;
+    }
+
+    const maxRetries = 5;
     let attempt = 0;
     let success = false;
 
@@ -194,6 +241,10 @@ export async function activate(context: vscode.ExtensionContext) {
               progress.report({ message: `Retrying... (Attempt ${attempt + 1}/${maxRetries})` });
             }
           }
+        }
+
+        if (!success) {
+          lastFailedSyncTime = Date.now(); // Start cooldown period
         }
 
         if (success) {
@@ -250,13 +301,17 @@ export async function activate(context: vscode.ExtensionContext) {
 
     try {
       const result = await syncManager.initializeProject();
+      outputChannel.appendLine(`Initialize project result: ${JSON.stringify(result)}`);
       if (result.success) {
-        const action = await vscode.window.showInformationMessage(
-          result.message || "Project initialized successfully",
-          "Sync Workspace"
-        );
+        if (!result.message) {
+          outputChannel.appendLine("Warning: No message received from syncManager.initializeProject()");
+        }
+        const message = result.message || "Unexpected: No initialization message received";
+        const action = await vscode.window.showInformationMessage(message, "Sync Workspace", "Open in Browser");
         if (action === "Sync Workspace") {
           await vscode.commands.executeCommand("claudesync.syncWorkspace");
+        } else if (action === "Open in Browser") {
+          vscode.env.openExternal(vscode.Uri.parse(`https://claude.ai/project/${config.projectId}`));
         }
       } else {
         const errorMsg = result.error
@@ -351,9 +406,13 @@ export async function activate(context: vscode.ExtensionContext) {
     syncProjectInstructionsCommand,
     syncWorkspaceCommand,
     configureAutoSyncCommand,
-    configureStartupSyncCommand,
-    fileWatcher
+    configureStartupSyncCommand
   );
+
+  // add file watcher to disposables if it exists
+  if (fileWatcher) {
+    context.subscriptions.push(fileWatcher);
+  }
 }
 
 export function deactivate() {

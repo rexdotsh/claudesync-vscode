@@ -8,6 +8,7 @@ export class ConfigManager {
   private context: vscode.ExtensionContext;
   private gitManager: GitManager;
   private outputChannel: vscode.OutputChannel;
+  private cachedConfig: ClaudeSyncConfig | null = null;
 
   constructor(context: vscode.ExtensionContext, outputChannel: vscode.OutputChannel) {
     this.context = context;
@@ -16,15 +17,20 @@ export class ConfigManager {
   }
 
   public async getConfig(): Promise<ClaudeSyncConfig> {
+    if (this.cachedConfig) {
+      return this.cachedConfig;
+    }
     const globalConfig = await this.getGlobalConfig();
     const workspaceConfig = await this.getWorkspaceConfig();
-    return { ...globalConfig, ...workspaceConfig };
+    this.cachedConfig = { ...globalConfig, ...workspaceConfig };
+    return this.cachedConfig;
   }
 
   public async saveGlobalConfig(config: Partial<GlobalConfig>): Promise<void> {
     const currentConfig = await this.getGlobalConfig();
     const newConfig = { ...currentConfig, ...config };
     await this.context.globalState.update(ConfigManager.GLOBAL_CONFIG_KEY, newConfig);
+    this.cachedConfig = null; // invalidate cache
   }
 
   public async saveWorkspaceConfig(config: Partial<WorkspaceConfig>): Promise<void> {
@@ -37,7 +43,7 @@ export class ConfigManager {
     const configPath = vscode.Uri.joinPath(vscodeDir, ConfigManager.WORKSPACE_CONFIG_FILE);
 
     try {
-      // Create .vscode directory if it doesn't exist
+      // create .vscode directory if it doesn't exist
       try {
         await vscode.workspace.fs.stat(vscodeDir);
       } catch {
@@ -48,12 +54,12 @@ export class ConfigManager {
       const currentConfig = await this.getWorkspaceConfig();
       const newConfig = { ...currentConfig, ...config };
 
-      // Write the config file
       this.outputChannel.appendLine(`Saving configuration to ${ConfigManager.WORKSPACE_CONFIG_FILE}...`);
       await vscode.workspace.fs.writeFile(configPath, Buffer.from(JSON.stringify(newConfig, null, 2), "utf8"));
 
-      // Ensure the config file is added to .gitignore
+      // ensure the config file is added to .gitignore
       await this.gitManager.ensureGitIgnore();
+      this.cachedConfig = null; // invalidate cache
     } catch (error) {
       this.outputChannel.appendLine(
         `Failed to save workspace configuration: ${error instanceof Error ? error.message : String(error)}`
@@ -64,6 +70,7 @@ export class ConfigManager {
 
   public async clearConfig(): Promise<void> {
     await this.context.globalState.update(ConfigManager.GLOBAL_CONFIG_KEY, undefined);
+    this.cachedConfig = null; // invalidate cache
 
     const workspaceFolder = vscode.workspace.workspaceFolders?.[0];
     if (workspaceFolder) {
@@ -72,7 +79,7 @@ export class ConfigManager {
         await vscode.workspace.fs.delete(configPath);
         this.outputChannel.appendLine("Workspace configuration cleared.");
       } catch {
-        // Ignore error if file doesn't exist
+        // ignore error if file doesn't exist
         this.outputChannel.appendLine("No workspace configuration file to delete.");
       }
     }
@@ -99,8 +106,7 @@ export class ConfigManager {
         ...config,
       };
     } catch (error) {
-      // Return default config if file doesn't exist or can't be read
-      this.outputChannel.appendLine("No workspace configuration found, using defaults.");
+      this.outputChannel.appendLine("No workspace configuration found.");
       return this.getDefaultWorkspaceConfig();
     }
   }
@@ -111,11 +117,12 @@ export class ConfigManager {
       maxFileSize: 1024 * 1024, // 1MB
       autoSync: false,
       autoSyncDelay: 30,
-      syncOnStartup: true,
+      syncOnStartup: false, // slows down startup
     };
   }
 
   private getDefaultExcludePatterns(): string[] {
+    // think of better way to do this
     return [
       "node_modules/**",
       ".git/**",
@@ -131,6 +138,9 @@ export class ConfigManager {
       "poetry.lock",
       "bun.lockb",
       "cargo.lock",
+      ".projectinstructions",
+      ".vscode",
+      ".gitignore",
     ];
   }
 }
