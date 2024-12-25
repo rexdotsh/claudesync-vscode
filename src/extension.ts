@@ -27,6 +27,16 @@ export async function activate(context: vscode.ExtensionContext) {
       return;
     }
 
+    // check if project is initialized first
+    const isInitialized = await syncManager.isProjectInitialized();
+    if (!isInitialized) {
+      const init = await vscode.window.showErrorMessage("Project needs to be initialized first", "Initialize Project");
+      if (init) {
+        await vscode.commands.executeCommand("claudesync.initProject");
+      }
+      return;
+    }
+
     const maxRetries = 20; // Maximum number of retries
     let attempt = 0;
     let success = false;
@@ -42,7 +52,7 @@ export async function activate(context: vscode.ExtensionContext) {
           try {
             outputChannel.appendLine(`Syncing ${files.length} files... (Attempt ${attempt + 1}/${maxRetries})`);
             const result = await syncManager.syncFiles(files);
-            
+
             if (result.success) {
               success = true;
               outputChannel.appendLine(`Files synced successfully: ${result.message}`);
@@ -51,12 +61,13 @@ export async function activate(context: vscode.ExtensionContext) {
               if (init) {
                 await vscode.commands.executeCommand("claudesync.initProject");
               }
-              return;
+              success = false; // Ensure we don't show success message
+              break; // Exit the retry loop
             } else {
               const errorMsg = result.error ? `${result.message}: ${result.error.message}` : result.message;
               outputChannel.appendLine(`Failed to sync files: ${errorMsg}`);
               if (attempt < maxRetries - 1) {
-                await new Promise(resolve => setTimeout(resolve, 150)); // Wait 100ms before retrying
+                await new Promise((resolve) => setTimeout(resolve, 150)); // Wait 150ms before retrying
                 attempt++;
                 progress.report({ message: `Retrying sync... (Attempt ${attempt + 1}/${maxRetries})` });
               }
@@ -68,7 +79,7 @@ export async function activate(context: vscode.ExtensionContext) {
               outputChannel.appendLine(`Stack trace: ${error.stack}`);
             }
             if (attempt < maxRetries - 1) {
-              await new Promise(resolve => setTimeout(resolve, 100)); // Wait 100ms before retrying
+              await new Promise((resolve) => setTimeout(resolve, 100)); // Wait 100ms before retrying
               attempt++;
               progress.report({ message: `Retrying sync... (Attempt ${attempt + 1}/${maxRetries})` });
             }
@@ -77,6 +88,8 @@ export async function activate(context: vscode.ExtensionContext) {
 
         if (success) {
           vscode.window.showInformationMessage("Files synced successfully");
+        } else if (attempt >= maxRetries) {
+          vscode.window.showErrorMessage("Failed to sync files after maximum retries");
         }
       }
     );
@@ -124,7 +137,10 @@ export async function activate(context: vscode.ExtensionContext) {
     try {
       const result = await syncManager.initializeProject();
       if (result.success) {
-        vscode.window.showInformationMessage(result.message);
+        const action = await vscode.window.showInformationMessage(result.message, "Sync Workspace");
+        if (action === "Sync Workspace") {
+          await vscode.commands.executeCommand("claudesync.syncWorkspace");
+        }
       } else {
         const errorMsg = result.error ? `${result.message}: ${result.error.message}` : result.message;
         vscode.window.showErrorMessage(errorMsg);

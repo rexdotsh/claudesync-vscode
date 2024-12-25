@@ -22,6 +22,22 @@ export class SyncManager {
     this.gitignoreManager = new GitignoreManager(outputChannel);
   }
 
+  public async isProjectInitialized(): Promise<boolean> {
+    const workspaceFolder = vscode.workspace.workspaceFolders?.[0];
+    if (!workspaceFolder) {
+      return false;
+    }
+
+    try {
+      const vscodeDir = vscode.Uri.joinPath(workspaceFolder.uri, ".vscode");
+      const configPath = vscode.Uri.joinPath(vscodeDir, "claudesync.json");
+      await vscode.workspace.fs.stat(configPath);
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
   private async handleError<T>(operation: string, action: () => Promise<T>): Promise<SyncResult & { data?: T }> {
     try {
       const result = await action();
