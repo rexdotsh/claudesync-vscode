@@ -1,7 +1,8 @@
 {
   "name": "claudesync",
   "displayName": "ClaudeSync",
-  "description": "Sync your code with Claude AI assistant",
+  "description": "Sync your code with Claude.ai Projects",
+  "publisher": "rexdotsh",
   "version": "0.0.1",
   "engines": {
     "vscode": "^1.96.0"

@@ -38,10 +38,10 @@ export class SyncManager {
     }
   }
 
-  private async handleError<T>(operation: string, action: () => Promise<T>): Promise<SyncResult & { data?: T }> {
+  private async handleError<T>(operation: string, action: () => Promise<T>): Promise<SyncResult> {
     try {
       const result = await action();
-      return { success: true, message: `${operation} completed successfully`, data: result };
+      return { success: true, data: result };
     } catch (error) {
       this.outputChannel.appendLine(`Error in ${operation}: ${error instanceof Error ? error.message : String(error)}`);
       if (error instanceof Error && error.stack) {
@@ -124,7 +124,7 @@ export class SyncManager {
       if (!orgs.length) {
         return {
           success: false,
-          message: "No organizations found. Please make sure you have access to Claude AI",
+          message: "No organizations found. Please make sure you have access to Claude",
         };
       }
 
@@ -157,7 +157,10 @@ export class SyncManager {
         projectId: this.currentProject.id,
       });
 
-      return { success: true, message: `Project '${projectName}' initialized with Claude!` };
+      return {
+        success: true,
+        message: `Project '${projectName}' has been successfully initialized and configured with Claude`,
+      };
     });
   }
 
@@ -182,17 +185,17 @@ export class SyncManager {
       this.outputChannel.appendLine(`Prepared ${fileContents.length} files for sync`);
 
       const existingFiles = await this.claudeClient.listFiles(this.currentOrg!.id, this.currentProject!.id);
+      let skipped = 0;
 
       await vscode.window.withProgress(
         {
           location: vscode.ProgressLocation.Notification,
-          title: "Syncing files with Claude AI",
+          title: "Syncing files with Claude",
           cancellable: false,
         },
         async (progress) => {
           const total = fileContents.length;
           let current = 0;
-          let skipped = 0;
 
           for (const file of fileContents) {
             progress.report({
@@ -209,7 +212,7 @@ export class SyncManager {
                 computeSHA256Hash(file.content),
               ]);
 
-              if (localHash === remoteHash) {
+              if (remoteHash === localHash) {
                 skipped++;
                 continue;
               }
@@ -226,7 +229,12 @@ export class SyncManager {
         }
       );
 
-      return { success: true, message: `Successfully synced ${fileContents.length} files` };
+      return {
+        success: true,
+        message: `Successfully synced ${fileContents.length} file${fileContents.length === 1 ? "" : "s"} with Claude${
+          skipped > 0 ? ` (${skipped} unchanged file${skipped === 1 ? "" : "s"} skipped)` : ""
+        }`,
+      };
     });
   }
 
@@ -239,7 +247,7 @@ export class SyncManager {
 
       const result = await this.updateProjectInstructions();
       return result.success
-        ? { success: true, message: "Successfully updated project instructions from .projectinstructions file" }
+        ? { success: true, message: "Project instructions have been successfully updated in Claude" }
         : { success: false, message: "No .projectinstructions file found or failed to read it" };
     });
   }

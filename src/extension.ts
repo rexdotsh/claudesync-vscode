@@ -37,39 +37,44 @@ export async function activate(context: vscode.ExtensionContext) {
       return;
     }
 
-    const maxRetries = 20; // Maximum number of retries
+    // make this configurable?
+    const maxRetries = 20;
     let attempt = 0;
     let success = false;
 
     await vscode.window.withProgress(
       {
         location: vscode.ProgressLocation.Notification,
-        title: "Syncing files with Claude AI",
+        title: `Syncing ${files.length} file${files.length === 1 ? "" : "s"} with Claude`,
         cancellable: false,
       },
       async (progress) => {
         while (attempt < maxRetries && !success) {
           try {
-            outputChannel.appendLine(`Syncing ${files.length} files... (Attempt ${attempt + 1}/${maxRetries})`);
+            progress.report({ message: attempt > 0 ? `Attempt ${attempt + 1}/${maxRetries}` : "Starting sync..." });
             const result = await syncManager.syncFiles(files);
 
             if (result.success) {
               success = true;
-              outputChannel.appendLine(`Files synced successfully: ${result.message}`);
-            } else if (result.message.includes("Project not initialized")) {
-              const init = await vscode.window.showErrorMessage(result.message, "Initialize Project");
+              outputChannel.appendLine(`Files synced successfully: ${result.message || "No message provided"}`);
+              break;
+            } else if (result.message?.includes("Project not initialized")) {
+              const init = await vscode.window.showErrorMessage(
+                result.message || "Project not initialized",
+                "Initialize Project"
+              );
               if (init) {
                 await vscode.commands.executeCommand("claudesync.initProject");
               }
-              success = false; // Ensure we don't show success message
-              break; // Exit the retry loop
+              success = false;
+              break;
             } else {
               const errorMsg = result.error ? `${result.message}: ${result.error.message}` : result.message;
               outputChannel.appendLine(`Failed to sync files: ${errorMsg}`);
               if (attempt < maxRetries - 1) {
-                await new Promise((resolve) => setTimeout(resolve, 150)); // Wait 150ms before retrying
+                await new Promise((resolve) => setTimeout(resolve, 150));
                 attempt++;
-                progress.report({ message: `Retrying sync... (Attempt ${attempt + 1}/${maxRetries})` });
+                progress.report({ message: `Retrying... (Attempt ${attempt + 1}/${maxRetries})` });
               }
             }
           } catch (error) {
@@ -79,15 +84,19 @@ export async function activate(context: vscode.ExtensionContext) {
               outputChannel.appendLine(`Stack trace: ${error.stack}`);
             }
             if (attempt < maxRetries - 1) {
-              await new Promise((resolve) => setTimeout(resolve, 100)); // Wait 100ms before retrying
+              await new Promise((resolve) => setTimeout(resolve, 100));
               attempt++;
-              progress.report({ message: `Retrying sync... (Attempt ${attempt + 1}/${maxRetries})` });
+              progress.report({ message: `Retrying... (Attempt ${attempt + 1}/${maxRetries})` });
             }
           }
         }
 
         if (success) {
-          vscode.window.showInformationMessage("Files synced successfully");
+          // add small delay to ensure progress notification has closed
+          await new Promise((resolve) => setTimeout(resolve, 500));
+          vscode.window.showInformationMessage(
+            `Successfully synced ${files.length} file${files.length === 1 ? "" : "s"} with Claude!`
+          );
         } else if (attempt >= maxRetries) {
           vscode.window.showErrorMessage("Failed to sync files after maximum retries");
         }
@@ -113,7 +122,7 @@ export async function activate(context: vscode.ExtensionContext) {
       try {
         await configManager.saveGlobalConfig({ sessionToken: token });
         await updateSyncManager();
-        vscode.window.showInformationMessage("Claude session token updated successfully");
+        vscode.window.showInformationMessage("Claude session token has been successfully saved and configured");
       } catch (error) {
         const errorMsg = `Failed to save token: ${error instanceof Error ? error.message : String(error)}`;
         vscode.window.showErrorMessage(errorMsg);
@@ -137,12 +146,17 @@ export async function activate(context: vscode.ExtensionContext) {
     try {
       const result = await syncManager.initializeProject();
       if (result.success) {
-        const action = await vscode.window.showInformationMessage(result.message, "Sync Workspace");
+        const action = await vscode.window.showInformationMessage(
+          result.message || "Project initialized successfully",
+          "Sync Workspace"
+        );
         if (action === "Sync Workspace") {
           await vscode.commands.executeCommand("claudesync.syncWorkspace");
         }
       } else {
-        const errorMsg = result.error ? `${result.message}: ${result.error.message}` : result.message;
+        const errorMsg = result.error
+          ? `${result.message || "Error"}: ${result.error.message}`
+          : result.message || "Unknown error";
         vscode.window.showErrorMessage(errorMsg);
       }
     } catch (error) {
@@ -202,10 +216,13 @@ export async function activate(context: vscode.ExtensionContext) {
       try {
         const result = await syncManager.syncProjectInstructions();
         if (result.success) {
-          vscode.window.showInformationMessage(result.message);
-          outputChannel.appendLine(result.message);
+          const message = result.message || "Project instructions synced successfully";
+          vscode.window.showInformationMessage(message);
+          outputChannel.appendLine(message);
         } else {
-          const errorMsg = result.error ? `${result.message}: ${result.error.message}` : result.message;
+          const errorMsg = result.error
+            ? `${result.message || "Error"}: ${result.error.message}`
+            : result.message || "Unknown error";
           outputChannel.appendLine(`Failed to sync project instructions: ${errorMsg}`);
           vscode.window.showErrorMessage(errorMsg);
         }
