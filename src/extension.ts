@@ -128,9 +128,8 @@ export async function activate(context: vscode.ExtensionContext) {
 
     try {
       const config = await configManager.getConfig();
-      // always exclude node_modules, and any patterns in the config
-      const excludePatterns = ["**/node_modules/**", ...(config.excludePatterns || [])];
-      outputChannel.appendLine(`Using exclude patterns: ${excludePatterns.join(", ")}`);
+      const excludePatterns = config.excludePatterns || [];
+      outputChannel.appendLine(`Using exclude patterns from config: ${excludePatterns.join(", ")}`);
 
       const files = await vscode.workspace.findFiles("**/*", `{${excludePatterns.join(",")}}`);
       await syncFiles(files);

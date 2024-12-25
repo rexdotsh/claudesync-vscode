@@ -1,6 +1,7 @@
 import * as vscode from "vscode";
 import { ClaudeClient, Organization, Project } from "./claude/client";
 import { ConfigManager } from "./config";
+import { GitignoreManager } from "./gitignoreManager";
 import { ClaudeSyncConfig, FileContent, SyncResult } from "./types";
 import { computeSHA256Hash } from "./utils";
 
@@ -11,12 +12,14 @@ export class SyncManager {
   private currentProject?: Project;
   private outputChannel: vscode.OutputChannel;
   private configManager: ConfigManager;
+  private gitignoreManager: GitignoreManager;
 
   constructor(config: ClaudeSyncConfig, outputChannel: vscode.OutputChannel, configManager: ConfigManager) {
     this.config = config;
     this.outputChannel = outputChannel;
     this.claudeClient = new ClaudeClient(config);
     this.configManager = configManager;
+    this.gitignoreManager = new GitignoreManager(outputChannel);
   }
 
   private async handleError<T>(operation: string, action: () => Promise<T>): Promise<SyncResult & { data?: T }> {
@@ -149,6 +152,12 @@ export class SyncManager {
         return projectResult;
       }
 
+      // load gitignore patterns if workspace folder exists
+      const workspaceFolder = vscode.workspace.workspaceFolders?.[0];
+      if (workspaceFolder) {
+        await this.gitignoreManager.loadGitignore(workspaceFolder.uri);
+      }
+
       this.outputChannel.appendLine("Preparing files for sync...");
       const fileContents = await this.prepareFiles(files);
       if (!fileContents.length) {
@@ -264,9 +273,15 @@ export class SyncManager {
   }
 
   private shouldExcludeFile(filePath: string): boolean {
-    return this.config.excludePatterns.some((pattern) => {
-      const regexPattern = pattern.replace(/\./g, "\\.").replace(/\*\*/g, ".*").replace(/\*/g, "[^/]*");
-      return new RegExp(`^${regexPattern}$`).test(filePath);
+    const isExcludedByConfig = this.config.excludePatterns.some((pattern) => {
+      return GitignoreManager.isMatch(pattern, filePath, true);
     });
+
+    if (isExcludedByConfig) {
+      return true;
+    }
+
+    // check gitignore patterns
+    return this.gitignoreManager.shouldIgnore(filePath);
   }
 }
