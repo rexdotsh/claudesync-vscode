@@ -113,6 +113,20 @@ export class ConfigManager {
   }
 
   private getDefaultExcludePatterns(): string[] {
-    return ["node_modules/**", ".git/**", "dist/**", "build/**", "**/*.pyc", "**/__pycache__/**", ".env", ".env.*"];
+    return [
+      "node_modules/**",
+      ".git/**",
+      "dist/**",
+      "build/**",
+      "**/*.pyc",
+      "**/__pycache__/**",
+      ".env",
+      ".env.*",
+      "package-lock.json",
+      "yarn.lock",
+      "pnpm-lock.yaml",
+      "poetry.lock",
+      "cargo.lock",
+    ];
   }
 }
