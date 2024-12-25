@@ -29,8 +29,9 @@ export interface RemoteFileContent {
 
 export interface SyncResult {
   success: boolean;
-  message: string;
+  message?: string;
   error?: Error;
+  data?: any;
 }
 
 export interface AutoSyncStatus {
