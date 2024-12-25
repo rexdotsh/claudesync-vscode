@@ -33,8 +33,3 @@ export interface SyncResult {
   error?: Error;
   data?: any;
 }
-
-export interface AutoSyncStatus {
-  enabled: boolean;
-  timer?: NodeJS.Timeout;
-}
