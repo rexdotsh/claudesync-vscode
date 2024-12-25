@@ -43,7 +43,6 @@ export class ClaudeClient {
           Accept: "application/json",
           Cookie: `sessionKey=${this.sessionToken}`,
         },
-        withCredentials: true,
         validateStatus: null,
       });
 
