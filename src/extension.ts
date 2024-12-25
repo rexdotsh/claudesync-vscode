@@ -37,10 +37,26 @@ export async function activate(context: vscode.ExtensionContext) {
       clearTimeout(autoSyncTimer);
     }
 
-    // set new timer
-    autoSyncTimer = setTimeout(async () => {
-      await syncFiles([uri]);
-    }, config.autoSyncDelay * 1000);
+    let attempts = 0;
+    const maxAttempts = 10;
+    const delayMs = 3000; // 3 seconds
+
+    const attemptSync = async () => {
+      try {
+        await syncFiles([uri]);
+      } catch (error) {
+        attempts++;
+        if (attempts < maxAttempts) {
+          outputChannel.appendLine(`Auto-sync failed. Retrying...`);
+          autoSyncTimer = setTimeout(attemptSync, delayMs);
+        } else {
+          outputChannel.appendLine(`Auto-sync failed after ${maxAttempts} attempts: ${error instanceof Error ? error.message : String(error)}`);
+        }
+      }
+    };
+
+    // start first attempt
+    autoSyncTimer = setTimeout(attemptSync, config.autoSyncDelay * 1000);
   };
 
   const setupFileWatcher = async () => {
@@ -214,7 +230,7 @@ export async function activate(context: vscode.ExtensionContext) {
       async (progress) => {
         while (attempt < maxRetries && !success) {
           try {
-            progress.report({ message: attempt > 0 ? `Attempt ${attempt + 1}/${maxRetries}` : "Processing files..." });
+            progress.report({ message: "Processing files..." });
             const result = await syncManager.syncFiles(files);
             lastResult = result;
 
@@ -239,8 +255,8 @@ export async function activate(context: vscode.ExtensionContext) {
               if (attempt >= maxRetries) {
                 break;
               }
-              await new Promise((resolve) => setTimeout(resolve, 150));
-              progress.report({ message: `Retrying... (Attempt ${attempt + 1}/${maxRetries})` });
+              await new Promise((resolve) => setTimeout(resolve, 3000));
+              progress.report({ message: "Syncing..." });
             }
           } catch (error) {
             const errorMsg = `Failed to sync files: ${error instanceof Error ? error.message : String(error)}`;
@@ -252,8 +268,8 @@ export async function activate(context: vscode.ExtensionContext) {
             if (attempt >= maxRetries) {
               break;
             }
-            await new Promise((resolve) => setTimeout(resolve, 100));
-            progress.report({ message: `Retrying... (Attempt ${attempt + 1}/${maxRetries})` });
+            await new Promise((resolve) => setTimeout(resolve, 3000));
+            progress.report({ message: "Syncing..." });
           }
         }
 
@@ -274,7 +290,7 @@ export async function activate(context: vscode.ExtensionContext) {
           }
         } else {
           vscode.window.showErrorMessage(
-            "Failed to sync files after maximum retries, is your Claude session token correct?"
+            "Failed to sync files, is your Claude session token correct?"
           );
         }
       }
@@ -443,6 +459,191 @@ export async function activate(context: vscode.ExtensionContext) {
     vscode.env.openExternal(vscode.Uri.parse(`https://claude.ai/project/${config.projectId}`));
   });
 
+  // command to exclude file from sync
+  const excludeFromSyncCommand = vscode.commands.registerCommand(
+    "claudesync.excludeFromSync",
+    async (uri: vscode.Uri) => {
+      if (!uri) {
+        vscode.window.showErrorMessage("No file selected");
+        return;
+      }
+
+      const config = await configManager.getConfig();
+      const relativePath = vscode.workspace.asRelativePath(uri);
+      const excludePatterns = config.excludePatterns || [];
+
+      // Check if pattern already exists
+      if (excludePatterns.includes(relativePath)) {
+        vscode.window.showInformationMessage(`${relativePath} is already excluded from sync`);
+        return;
+      }
+
+      try {
+        // First add to exclude patterns
+        excludePatterns.push(relativePath);
+        await configManager.saveWorkspaceConfig({ excludePatterns });
+
+        // Then try to delete from remote if project is initialized
+        const isInitialized = await syncManager.isProjectInitialized();
+        if (isInitialized && config.sessionToken) {
+          await vscode.window.withProgress(
+            {
+              location: vscode.ProgressLocation.Notification,
+              title: "Removing from Claude project",
+              cancellable: false,
+            },
+            async (progress) => {
+              progress.report({ message: "Checking project status..." });
+              
+              let attempts = 0;
+              const maxAttempts = 10;
+              const delayMs = 1000; // 1 second
+              let lastError = "";
+
+              while (attempts < maxAttempts) {
+                const result = await syncManager.deleteRemoteFile(relativePath);
+                
+                if (result.success) {
+                  if (result.message === "File not found in remote project") {
+                    vscode.window.showInformationMessage(`${relativePath} excluded from sync (file was not in Claude project)`);
+                  } else {
+                    vscode.window.showInformationMessage(`${relativePath} excluded from sync and removed from Claude project`);
+                  }
+                  return;
+                }
+
+                attempts++;
+                lastError = result.message || "Unknown error";
+                
+                if (attempts < maxAttempts) {
+                  progress.report({ message: `Syncing...` });
+                  await new Promise(resolve => setTimeout(resolve, delayMs));
+                }
+              }
+
+              // If we get here, all attempts failed
+              const errorMsg = lastError;
+              vscode.window.showWarningMessage(
+                `${relativePath} excluded from sync but could not be removed from Claude project: ${errorMsg}`
+              );
+              outputChannel.appendLine(`Failed to delete remote file: ${errorMsg}`);
+            }
+          );
+        } else {
+          // If project is not initialized, just show basic success message
+          vscode.window.showInformationMessage(`${relativePath} excluded from sync`);
+        }
+      } catch (error) {
+        const errorMsg = `Failed to exclude file: ${error instanceof Error ? error.message : String(error)}`;
+        vscode.window.showErrorMessage(errorMsg);
+        outputChannel.appendLine(`Error: ${errorMsg}`);
+        
+        // Try to rollback the exclude pattern change
+        try {
+          const index = excludePatterns.indexOf(relativePath);
+          if (index !== -1) {
+            excludePatterns.splice(index, 1);
+            await configManager.saveWorkspaceConfig({ excludePatterns });
+          }
+        } catch (rollbackError) {
+          outputChannel.appendLine(`Failed to rollback exclude pattern: ${rollbackError}`);
+        }
+      }
+    }
+  );
+
+  // command to include file in sync
+  const includeInSyncCommand = vscode.commands.registerCommand(
+    "claudesync.includeInSync",
+    async (uri: vscode.Uri) => {
+      if (!uri) {
+        vscode.window.showErrorMessage("No file selected");
+        return;
+      }
+
+      const config = await configManager.getConfig();
+      const relativePath = vscode.workspace.asRelativePath(uri);
+      const excludePatterns = config.excludePatterns || [];
+
+      // Check if pattern exists
+      const index = excludePatterns.indexOf(relativePath);
+      if (index === -1) {
+        vscode.window.showInformationMessage(`${relativePath} is not excluded from sync`);
+        return;
+      }
+
+      try {
+        // Remove the pattern
+        excludePatterns.splice(index, 1);
+        await configManager.saveWorkspaceConfig({ excludePatterns });
+
+        // Check if we can sync the file
+        const isInitialized = await syncManager.isProjectInitialized();
+        if (isInitialized && config.sessionToken) {
+          await vscode.window.withProgress(
+            {
+              location: vscode.ProgressLocation.Notification,
+              title: "Including in Claude project",
+              cancellable: false,
+            },
+            async (progress) => {
+              progress.report({ message: "Syncing file..." });
+              
+              let attempts = 0;
+              const maxAttempts = 10;
+              const delayMs = 1000; // 1 second
+              let lastError = "";
+
+              while (attempts < maxAttempts) {
+                const result = await syncManager.syncFiles([uri]);
+                
+                if (result.success) {
+                  if (result.data?.syncedFiles > 0) {
+                    vscode.window.showInformationMessage(`${relativePath} included in sync and uploaded to Claude project`);
+                  } else {
+                    vscode.window.showInformationMessage(`${relativePath} included in sync`);
+                  }
+                  return;
+                }
+
+                attempts++;
+                lastError = result.message || "Unknown error";
+                
+                if (attempts < maxAttempts) {
+                  progress.report({ message: `Syncing...` });
+                  await new Promise(resolve => setTimeout(resolve, delayMs));
+                }
+              }
+
+              // If we get here, all attempts failed
+              const errorMsg = lastError;
+              vscode.window.showWarningMessage(
+                `${relativePath} included in sync but upload failed: ${errorMsg}`
+              );
+              outputChannel.appendLine(`Failed to sync file: ${errorMsg}`);
+            }
+          );
+        } else {
+          vscode.window.showInformationMessage(`${relativePath} included in sync`);
+        }
+      } catch (error) {
+        const errorMsg = `Failed to include file: ${error instanceof Error ? error.message : String(error)}`;
+        vscode.window.showErrorMessage(errorMsg);
+        outputChannel.appendLine(`Error: ${errorMsg}`);
+        
+        // Try to rollback the exclude pattern change
+        try {
+          if (!excludePatterns.includes(relativePath)) {
+            excludePatterns.push(relativePath);
+            await configManager.saveWorkspaceConfig({ excludePatterns });
+          }
+        } catch (rollbackError) {
+          outputChannel.appendLine(`Failed to rollback include operation: ${rollbackError}`);
+        }
+      }
+    }
+  );
+
   context.subscriptions.push(
     setTokenCommand,
     initProjectCommand,
@@ -451,7 +652,9 @@ export async function activate(context: vscode.ExtensionContext) {
     syncProjectInstructionsCommand,
     configureAutoSyncCommand,
     configureStartupSyncCommand,
-    openInBrowserCommand
+    openInBrowserCommand,
+    excludeFromSyncCommand,
+    includeInSyncCommand
   );
 
   // add file watcher to disposables if it exists

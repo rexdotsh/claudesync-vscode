@@ -36,7 +36,8 @@
       },
       {
         "command": "claudesync.syncProjectInstructions",
-        "title": "ClaudeSync: Sync Project Instructions"
+        "title": "ClaudeSync: Sync Project Instructions",
+        "icon": "resources/instructions.svg"
       },
       {
         "command": "claudesync.configureAutoSync",
@@ -54,14 +55,44 @@
       {
         "command": "claudesync.showSettings",
         "title": "ClaudeSync: Show Current Settings"
+      },
+      {
+        "command": "claudesync.excludeFromSync",
+        "title": "ClaudeSync: Exclude from Sync"
+      },
+      {
+        "command": "claudesync.includeInSync",
+        "title": "ClaudeSync: Include in Sync"
       }
     ],
     "menus": {
+      "explorer/context": [
+        {
+          "command": "claudesync.syncProjectInstructions",
+          "group": "claudesync@1",
+          "when": "resourceFilename == .projectinstructions"
+        },
+        {
+          "command": "claudesync.excludeFromSync",
+          "group": "claudesync@2",
+          "when": "resourceScheme == file && resourceFilename != .projectinstructions"
+        },
+        {
+          "command": "claudesync.includeInSync",
+          "group": "claudesync@3",
+          "when": "resourceScheme == file && resourceFilename != .projectinstructions"
+        }
+      ],
       "editor/context": [
+        {
+          "command": "claudesync.syncProjectInstructions",
+          "group": "claudesync@1",
+          "when": "resourceFilename == .projectinstructions"
+        },
         {
           "command": "claudesync.syncCurrentFile",
           "group": "claudesync",
-          "when": "editorTextFocus"
+          "when": "editorTextFocus && resourceFilename != .projectinstructions"
         }
       ],
       "editor/title": [
@@ -72,14 +103,22 @@
           "icon": "resources/browser.svg"
         },
         {
+          "command": "claudesync.syncProjectInstructions",
+          "group": "navigation@-3",
+          "when": "resourceFilename == .projectinstructions",
+          "icon": "resources/instructions.svg"
+        },
+        {
           "command": "claudesync.syncCurrentFile",
           "group": "navigation@-3",
-          "when": "resourceLangId"
+          "when": "resourceLangId && resourceFilename != .projectinstructions",
+          "icon": "resources/sync.svg"
         },
         {
           "command": "claudesync.syncWorkspace",
           "group": "navigation@-2",
-          "when": "resourceLangId"
+          "when": "resourceLangId && resourceFilename != .projectinstructions",
+          "icon": "resources/project.svg"
         }
       ]
     },

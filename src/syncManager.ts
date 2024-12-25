@@ -406,4 +406,28 @@ export class SyncManager {
     // check gitignore patterns
     return this.gitignoreManager.shouldIgnore(filePath);
   }
+
+  public async deleteRemoteFile(filePath: string): Promise<SyncResult> {
+    return this.handleError("delete remote file", async () => {
+      const projectResult = await this.ensureProjectAndOrg();
+      if (!projectResult.success) {
+        return projectResult;
+      }
+
+      const files = await this.claudeClient.listFiles(this.currentOrg!.id, this.currentProject!.id);
+      const existingFile = files.find(f => f.file_name === filePath);
+      
+      if (!existingFile) {
+        return { success: true, message: "File not found in remote project" };
+      }
+
+      await this.claudeClient.deleteFile(
+        this.currentOrg!.id,
+        this.currentProject!.id,
+        existingFile.uuid
+      );
+
+      return { success: true, message: "File deleted from remote project" };
+    });
+  }
 }
