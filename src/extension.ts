@@ -1,25 +1,17 @@
-// The module 'vscode' contains the VS Code extensibility API
-// Import the module and reference it with the alias vscode in your code below
 import * as vscode from "vscode";
 import { ConfigManager } from "./config";
 import { SyncManager } from "./syncManager";
 
 let outputChannel: vscode.OutputChannel;
 
-// This method is called when your extension is activated
-// Your extension is activated the very first time the command is executed
 export async function activate(context: vscode.ExtensionContext) {
-  // Create output channel
   outputChannel = vscode.window.createOutputChannel("ClaudeSync");
-  outputChannel.show();
 
   const configManager = new ConfigManager(context);
   let syncManager: SyncManager;
 
-  // Initialize sync manager with config
   const updateSyncManager = async () => {
     const config = await configManager.getConfig();
-    outputChannel.appendLine(`Config loaded: ${JSON.stringify(config, null, 2)}`);
     syncManager = new SyncManager(config, outputChannel);
   };
   await updateSyncManager();
@@ -40,14 +32,11 @@ export async function activate(context: vscode.ExtensionContext) {
 
     if (token) {
       try {
-        outputChannel.appendLine("Saving new session token...");
         await configManager.saveConfig({ sessionToken: token });
         await updateSyncManager();
         vscode.window.showInformationMessage("Claude session token updated successfully");
-        outputChannel.appendLine("Session token saved successfully");
       } catch (error) {
         const errorMsg = `Failed to save token: ${error instanceof Error ? error.message : String(error)}`;
-        outputChannel.appendLine(`Error: ${errorMsg}`);
         vscode.window.showErrorMessage(errorMsg);
       }
     }
@@ -56,8 +45,6 @@ export async function activate(context: vscode.ExtensionContext) {
   // Command to initialize project
   const initProjectCommand = vscode.commands.registerCommand("claudesync.initProject", async () => {
     const config = await configManager.getConfig();
-    outputChannel.appendLine("Initializing project...");
-    outputChannel.appendLine(`Current config: ${JSON.stringify(config, null, 2)}`);
 
     if (!config.sessionToken) {
       const setToken = await vscode.window.showErrorMessage("Please set your Claude session token first", "Set Token");
@@ -72,18 +59,12 @@ export async function activate(context: vscode.ExtensionContext) {
       const result = await syncManager.initializeProject();
       if (result.success) {
         vscode.window.showInformationMessage(result.message);
-        outputChannel.appendLine(`Project initialized successfully: ${result.message}`);
       } else {
         const errorMsg = result.error ? `${result.message}: ${result.error.message}` : result.message;
-        outputChannel.appendLine(`Failed to initialize project: ${errorMsg}`);
         vscode.window.showErrorMessage(errorMsg);
       }
     } catch (error) {
       const errorMsg = `Failed to initialize project: ${error instanceof Error ? error.message : String(error)}`;
-      outputChannel.appendLine(`Error: ${errorMsg}`);
-      if (error instanceof Error && error.stack) {
-        outputChannel.appendLine(`Stack trace: ${error.stack}`);
-      }
       vscode.window.showErrorMessage(errorMsg);
     }
   });

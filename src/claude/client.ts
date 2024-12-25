@@ -31,14 +31,12 @@ export class ClaudeClient {
     try {
       const url = `${this.baseUrl}${endpoint}`;
       console.log(`Making ${method} request to ${url}`);
-      console.log(`Cookie: ${`sessionKey=${this.sessionToken}`}`);
       const response = await axios({
         method,
         url,
         data,
         headers: {
-          "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:129.0) Gecko/20100101 Firefox/129.0",
-          "Content-Type": "application/json",
+          "User-Agent": "Mozilla/5.0 (X11; Linux x86_64)",
           "Accept-Encoding": "gzip",
           Accept: "application/json",
           Cookie: `sessionKey=${this.sessionToken};`,
@@ -46,8 +44,6 @@ export class ClaudeClient {
         validateStatus: null,
       });
 
-      console.log(`Response status: ${response.status}`);
-      console.log(`Response headers:`, response.headers);
       if (response.status === 403) {
         console.error("Authentication failed - invalid session token");
         console.error("Response data:", response.data);
@@ -97,10 +93,7 @@ export class ClaudeClient {
   }
 
   async getOrganizations(): Promise<Organization[]> {
-    console.log("Getting organizations");
     const response = await this.makeRequest<any[]>("GET", "/organizations");
-    console.log(`Got ${response.length} organizations`);
-    console.log("Organizations response:", response);
 
     return response
       .filter(
@@ -115,10 +108,7 @@ export class ClaudeClient {
   }
 
   async getProjects(organizationId: string, includeArchived = false): Promise<Project[]> {
-    console.log(`Getting projects for organization ${organizationId}`);
     const response = await this.makeRequest<any[]>("GET", `/organizations/${organizationId}/projects`);
-    console.log(`Got ${response.length} projects`);
-    console.log("Projects response:", response);
 
     return response
       .filter((project) => includeArchived || !project.archived_at)
@@ -130,15 +120,12 @@ export class ClaudeClient {
   }
 
   async createProject(organizationId: string, name: string, description = ""): Promise<Project> {
-    console.log(`Creating project "${name}" in organization ${organizationId}`);
     const data = {
       name,
       description,
       is_private: true,
     };
     const response = await this.makeRequest<any>("POST", `/organizations/${organizationId}/projects`, data);
-    console.log(`Created project with ID ${response.uuid}`);
-    console.log("Create project response:", response);
 
     return {
       id: response.uuid,
@@ -148,13 +135,10 @@ export class ClaudeClient {
   }
 
   async listFiles(organizationId: string, projectId: string): Promise<FileDoc[]> {
-    console.log(`Listing files for project ${projectId} in organization ${organizationId}`);
     const response = await this.makeRequest<any[]>(
       "GET",
       `/organizations/${organizationId}/projects/${projectId}/docs`
     );
-    console.log(`Found ${response.length} files`);
-    console.log("List files response:", response);
 
     return response.map((file) => ({
       uuid: file.uuid,
@@ -165,7 +149,6 @@ export class ClaudeClient {
   }
 
   async uploadFile(organizationId: string, projectId: string, fileName: string, content: string): Promise<FileDoc> {
-    console.log(`Uploading file "${fileName}" to project ${projectId}`);
     const data = {
       file_name: fileName,
       content,
@@ -176,7 +159,6 @@ export class ClaudeClient {
       data
     );
     console.log(`Uploaded file with UUID ${response.uuid}`);
-    console.log("Upload file response:", response);
     return response;
   }
 
