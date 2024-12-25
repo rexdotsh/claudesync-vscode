@@ -140,58 +140,6 @@ export async function activate(context: vscode.ExtensionContext) {
     }
   });
 
-  // Command to sync selected files
-  const syncSelectedCommand = vscode.commands.registerCommand(
-    "claudesync.syncSelected",
-    async (uri: vscode.Uri, uris: vscode.Uri[]) => {
-      const filesToSync = uris || (uri ? [uri] : []);
-      if (!filesToSync.length) {
-        vscode.window.showErrorMessage("No files selected to sync");
-        return;
-      }
-
-      const config = await configManager.getConfig();
-      if (!config.sessionToken) {
-        const setToken = await vscode.window.showErrorMessage(
-          "Please set your Claude session token first",
-          "Set Token"
-        );
-        if (setToken) {
-          await vscode.commands.executeCommand("claudesync.setToken");
-          return;
-        }
-        return;
-      }
-
-      try {
-        outputChannel.appendLine(`Syncing files: ${filesToSync.map((f) => f.fsPath).join(", ")}`);
-        const result = await syncManager.syncFiles(filesToSync);
-        if (result.success) {
-          vscode.window.showInformationMessage(result.message);
-          outputChannel.appendLine(`Files synced successfully: ${result.message}`);
-        } else {
-          if (result.message.includes("Project not initialized")) {
-            const init = await vscode.window.showErrorMessage(result.message, "Initialize Project");
-            if (init) {
-              await vscode.commands.executeCommand("claudesync.initProject");
-            }
-          } else {
-            const errorMsg = result.error ? `${result.message}: ${result.error.message}` : result.message;
-            outputChannel.appendLine(`Failed to sync files: ${errorMsg}`);
-            vscode.window.showErrorMessage(errorMsg);
-          }
-        }
-      } catch (error) {
-        const errorMsg = `Failed to sync files: ${error instanceof Error ? error.message : String(error)}`;
-        outputChannel.appendLine(`Error: ${errorMsg}`);
-        if (error instanceof Error && error.stack) {
-          outputChannel.appendLine(`Stack trace: ${error.stack}`);
-        }
-        vscode.window.showErrorMessage(errorMsg);
-      }
-    }
-  );
-
   // Command to sync project instructions
   const syncProjectInstructionsCommand = vscode.commands.registerCommand(
     "claudesync.syncProjectInstructions",
@@ -236,7 +184,6 @@ export async function activate(context: vscode.ExtensionContext) {
     setTokenCommand,
     initProjectCommand,
     syncCurrentFileCommand,
-    syncSelectedCommand,
     syncProjectInstructionsCommand,
     syncWorkspaceCommand
   );
