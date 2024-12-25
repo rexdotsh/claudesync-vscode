@@ -40,7 +40,8 @@ export class ClaudeClient {
           "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:129.0) Gecko/20100101 Firefox/129.0",
           "Content-Type": "application/json",
           "Accept-Encoding": "gzip",
-          Cookie: `sessionKey=${this.sessionToken}`,
+          Accept: "application/json",
+          Cookie: `sessionKey=${this.sessionToken};`,
         },
         validateStatus: null,
       });
