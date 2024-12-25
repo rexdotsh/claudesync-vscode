@@ -1,6 +1,5 @@
 import * as vscode from "vscode";
 import { ClaudeClient, Organization, Project } from "./claude/client";
-import { CompressionUtils } from "./compression";
 import { ClaudeSyncConfig, FileContent, SyncResult } from "./types";
 
 export class SyncManager {
@@ -82,7 +81,6 @@ export class SyncManager {
           projectId: this.currentProject.id,
           sessionToken: this.config.sessionToken,
           excludePatterns: this.config.excludePatterns,
-          maxTokens: this.config.maxTokens,
           maxFileSize: this.config.maxFileSize,
         },
         vscode.ConfigurationTarget.Workspace
@@ -183,10 +181,6 @@ export class SyncManager {
 
             this.outputChannel.appendLine(`Processing file: ${file.path}`);
             const existingFile = existingFiles.find((f) => f.file_name === file.path);
-            const compressed = await CompressionUtils.compressContent(file.content);
-            this.outputChannel.appendLine(
-              `Compressed size: ${compressed.compressedSize} bytes (from ${compressed.originalSize} bytes)`
-            );
 
             if (existingFile) {
               this.outputChannel.appendLine(`Deleting existing file: ${existingFile.uuid}`);
@@ -194,12 +188,7 @@ export class SyncManager {
             }
 
             this.outputChannel.appendLine(`Uploading file: ${file.path}`);
-            await this.claudeClient.uploadFile(
-              this.currentOrg!.id,
-              this.currentProject!.id,
-              file.path,
-              compressed.content
-            );
+            await this.claudeClient.uploadFile(this.currentOrg!.id, this.currentProject!.id, file.path, file.content);
             this.outputChannel.appendLine(`File uploaded successfully: ${file.path}`);
           }
         }

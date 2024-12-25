@@ -37,7 +37,6 @@ export class ConfigManager {
         ".env",
         ".env.*",
       ],
-      maxTokens: 100000,
       maxFileSize: 1024 * 1024, // 1MB
     };
   }

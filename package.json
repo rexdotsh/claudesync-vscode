@@ -83,11 +83,6 @@
               ],
               "description": "Patterns to exclude from syncing"
             },
-            "maxTokens": {
-              "type": "number",
-              "default": 100000,
-              "description": "Maximum number of tokens per file"
-            },
             "maxFileSize": {
               "type": "number",
               "default": 1048576,
