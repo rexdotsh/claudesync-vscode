@@ -22,7 +22,7 @@
         "title": "ClaudeSync: Initialize Project"
       },
       {
-        "command": "claudesync.syncCurrent",
+        "command": "claudesync.syncCurrentFile",
         "title": "ClaudeSync: Sync Current File",
         "icon": {
           "light": "resources/sync-light.svg",
@@ -34,18 +34,11 @@
         "title": "ClaudeSync: Sync Workspace"
       },
       {
-        "command": "claudesync.syncInstructions",
+        "command": "claudesync.syncProjectInstructions",
         "title": "ClaudeSync: Sync Project Instructions"
       }
     ],
     "menus": {
-      "explorer/context": [
-        {
-          "command": "claudesync.syncSelected",
-          "group": "claudesync",
-          "when": "explorerViewletVisible"
-        }
-      ],
       "editor/context": [
         {
           "command": "claudesync.syncCurrentFile",
