@@ -60,6 +60,19 @@ export class SyncManager {
         );
       }
 
+      try {
+        const instructionsUri = vscode.Uri.joinPath(workspaceFolder.uri, ".projectinstructions");
+        const instructionsContent = await vscode.workspace.fs.readFile(instructionsUri);
+        const instructions = new TextDecoder().decode(instructionsContent);
+
+        // update project's prompt template
+        await this.claudeClient.updateProjectPromptTemplate(this.currentOrg.id, this.currentProject.id, instructions);
+        this.outputChannel.appendLine("Updated project prompt template from .projectinstructions file");
+      } catch (error) {
+        // don't fail if .projectinstructions doesn't exist
+        this.outputChannel.appendLine("No .projectinstructions file found or failed to read it");
+      }
+
       // save project info in config
       const config = vscode.workspace.getConfiguration();
       await config.update(
@@ -76,7 +89,7 @@ export class SyncManager {
 
       return {
         success: true,
-        message: `Project '${projectName}' initialized with Claude AI`,
+        message: `Project '${projectName}' initialized with Claude!`,
       };
     } catch (error) {
       this.outputChannel.appendLine(
@@ -261,5 +274,82 @@ export class SyncManager {
       const regexPattern = pattern.replace(/\./g, "\\.").replace(/\*\*/g, ".*").replace(/\*/g, "[^/]*");
       return new RegExp(`^${regexPattern}$`).test(filePath);
     });
+  }
+
+  public async syncProjectInstructions(): Promise<SyncResult> {
+    try {
+      if (!this.currentOrg || !this.currentProject) {
+        this.outputChannel.appendLine("Loading organization and project from config...");
+        const config = vscode.workspace.getConfiguration("claudesync");
+        const orgId = config.get<string>("organizationId");
+        const projectId = config.get<string>("projectId");
+
+        if (!orgId || !projectId) {
+          return {
+            success: false,
+            message: "Project not initialized. Please run 'Initialize Project' first",
+          };
+        }
+
+        const orgs = await this.claudeClient.getOrganizations();
+        this.currentOrg = orgs.find((o) => o.id === orgId);
+
+        if (!this.currentOrg) {
+          return {
+            success: false,
+            message: "Organization not found. Please reinitialize the project",
+          };
+        }
+
+        const projects = await this.claudeClient.getProjects(this.currentOrg.id);
+        this.currentProject = projects.find((p) => p.id === projectId);
+
+        if (!this.currentProject) {
+          return {
+            success: false,
+            message: "Project not found. Please reinitialize the project",
+          };
+        }
+      }
+
+      const workspaceFolder = vscode.workspace.workspaceFolders?.[0];
+      if (!workspaceFolder) {
+        return {
+          success: false,
+          message: "No workspace folder found",
+        };
+      }
+
+      try {
+        const instructionsUri = vscode.Uri.joinPath(workspaceFolder.uri, ".projectinstructions");
+        const instructionsContent = await vscode.workspace.fs.readFile(instructionsUri);
+        const instructions = new TextDecoder().decode(instructionsContent);
+
+        // update project's prompt template
+        await this.claudeClient.updateProjectPromptTemplate(this.currentOrg.id, this.currentProject.id, instructions);
+
+        return {
+          success: true,
+          message: "Successfully updated project instructions from .projectinstructions file",
+        };
+      } catch (error) {
+        return {
+          success: false,
+          message: "No .projectinstructions file found or failed to read it",
+        };
+      }
+    } catch (error) {
+      this.outputChannel.appendLine(
+        `Error in syncProjectInstructions: ${error instanceof Error ? error.message : String(error)}`
+      );
+      if (error instanceof Error && error.stack) {
+        this.outputChannel.appendLine(`Stack trace: ${error.stack}`);
+      }
+      return {
+        success: false,
+        message: "Failed to sync project instructions",
+        error: error instanceof Error ? error : new Error(String(error)),
+      };
+    }
   }
 }

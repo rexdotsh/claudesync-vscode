@@ -30,6 +30,10 @@
         "title": "ClaudeSync: Sync Selected Files"
       },
       {
+        "command": "claudesync.syncProjectInstructions",
+        "title": "ClaudeSync: Sync Project Instructions"
+      },
+      {
         "command": "claudesync.syncCurrentFile",
         "title": "Sync this file",
         "icon": {
