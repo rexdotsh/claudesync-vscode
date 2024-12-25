@@ -98,7 +98,6 @@ export async function activate(context: vscode.ExtensionContext) {
 
       let autoSyncDelay = config.autoSyncDelay;
       if (enableAutoSync === "Enable") {
-        // get delay from user (10 seconds to 3 minutes)
         const delay = await vscode.window.showInputBox({
           prompt: "Enter auto-sync delay in seconds (10-180)",
           value: String(config.autoSyncDelay),
@@ -118,13 +117,13 @@ export async function activate(context: vscode.ExtensionContext) {
         autoSyncDelay = parseInt(delay);
       }
 
-      // Save configuration
+      // save configuration
       await configManager.saveWorkspaceConfig({
         autoSync: enableAutoSync === "Enable",
         autoSyncDelay,
       });
 
-      // Update file watcher based on new auto-sync setting
+      // update file watcher based on new auto-sync setting
       await setupFileWatcher();
 
       vscode.window.showInformationMessage(
@@ -183,14 +182,13 @@ export async function activate(context: vscode.ExtensionContext) {
       return;
     }
 
-    // Check if we're in cooldown period after a failed sync
+    // check if we're in cooldown period after a failed sync
     const now = Date.now();
     if (now - lastFailedSyncTime < SYNC_COOLDOWN_MS) {
       outputChannel.appendLine("Skipping sync attempt - in cooldown period after recent failure");
       return;
     }
 
-    // Pass all files to syncManager which will handle filtering
     if (files.length === 0) {
       vscode.window.showInformationMessage("No files to sync");
       return;
@@ -254,7 +252,7 @@ export async function activate(context: vscode.ExtensionContext) {
         }
 
         if (!success) {
-          lastFailedSyncTime = Date.now(); // Start cooldown period
+          lastFailedSyncTime = Date.now(); // start cooldown period
         }
 
         if (success) {
