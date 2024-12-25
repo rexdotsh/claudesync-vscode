@@ -48,7 +48,8 @@
       },
       {
         "command": "claudesync.openInBrowser",
-        "title": "ClaudeSync: Open Project in Browser"
+        "title": "ClaudeSync: Open Project in Browser",
+        "icon": "resources/browser.svg"
       }
     ],
     "menus": {
@@ -60,6 +61,12 @@
         }
       ],
       "editor/title": [
+        {
+          "command": "claudesync.openInBrowser",
+          "group": "navigation@-4",
+          "when": "resourceLangId",
+          "icon": "resources/browser.svg"
+        },
         {
           "command": "claudesync.syncCurrentFile",
           "group": "navigation@-3",
