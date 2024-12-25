@@ -9,6 +9,7 @@ export interface WorkspaceConfig {
   maxFileSize: number; // in bytes
   autoSync: boolean;
   autoSyncDelay: number; // in seconds
+  syncOnStartup: boolean;
 }
 
 export interface ClaudeSyncConfig extends GlobalConfig, WorkspaceConfig {}

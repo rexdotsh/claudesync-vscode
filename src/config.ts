@@ -110,7 +110,8 @@ export class ConfigManager {
       excludePatterns: this.getDefaultExcludePatterns(),
       maxFileSize: 1024 * 1024, // 1MB
       autoSync: false,
-      autoSyncDelay: 30 // 30 seconds default
+      autoSyncDelay: 30,
+      syncOnStartup: true,
     };
   }
 

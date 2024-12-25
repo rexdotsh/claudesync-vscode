@@ -13,6 +13,12 @@ export async function activate(context: vscode.ExtensionContext) {
   const updateSyncManager = async () => {
     const config = await configManager.getConfig();
     syncManager = new SyncManager(config, outputChannel, configManager);
+
+    // sync workspace on startup if enabled and project is initialized
+    const isInitialized = await syncManager.isProjectInitialized();
+    if (isInitialized && config.sessionToken && config.syncOnStartup) {
+      vscode.commands.executeCommand("claudesync.syncWorkspace");
+    }
   };
   await updateSyncManager();
 
@@ -87,6 +93,30 @@ export async function activate(context: vscode.ExtensionContext) {
         `Auto-sync ${enableAutoSync === "Enable" ? "enabled" : "disabled"}${
           enableAutoSync === "Enable" ? ` with ${autoSyncDelay} seconds delay` : ""
         }`
+      );
+    }
+  );
+
+  // command to configure startup sync
+  const configureStartupSyncCommand = vscode.commands.registerCommand(
+    "claudesync.configureStartupSync",
+    async (): Promise<void> => {
+      const config = await configManager.getConfig();
+
+      const enableStartupSync = await vscode.window.showQuickPick(["Enable", "Disable"], {
+        placeHolder: "Enable or disable sync on startup?",
+      });
+
+      if (!enableStartupSync) {
+        return;
+      }
+
+      await configManager.saveWorkspaceConfig({
+        syncOnStartup: enableStartupSync === "Enable",
+      });
+
+      vscode.window.showInformationMessage(
+        `Sync on startup ${enableStartupSync === "Enable" ? "enabled" : "disabled"}`
       );
     }
   );
@@ -321,6 +351,7 @@ export async function activate(context: vscode.ExtensionContext) {
     syncProjectInstructionsCommand,
     syncWorkspaceCommand,
     configureAutoSyncCommand,
+    configureStartupSyncCommand,
     fileWatcher
   );
 }

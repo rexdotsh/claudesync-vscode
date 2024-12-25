@@ -10,7 +10,9 @@
   "categories": [
     "Other"
   ],
-  "activationEvents": [],
+  "activationEvents": [
+    "onStartupFinished"
+  ],
   "main": "./dist/extension.js",
   "contributes": {
     "commands": [
@@ -45,6 +47,10 @@
       {
         "command": "claudesync.configureAutoSync",
         "title": "ClaudeSync: Configure Auto-Sync"
+      },
+      {
+        "command": "claudesync.configureStartupSync",
+        "title": "ClaudeSync: Configure Startup Sync"
       }
     ],
     "menus": {
