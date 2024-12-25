@@ -13,3 +13,5 @@ vsc-extension-quickstart.md
 **/*.ts
 **/.vscode-test.*
 **/webpack.config.js
+# Don't ignore resources folder
+!resources/**
