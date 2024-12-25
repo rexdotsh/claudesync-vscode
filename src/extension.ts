@@ -27,32 +27,59 @@ export async function activate(context: vscode.ExtensionContext) {
       return;
     }
 
-    try {
-      outputChannel.appendLine(`Syncing ${files.length} files...`);
-      const result = await syncManager.syncFiles(files);
-      if (result.success) {
-        vscode.window.showInformationMessage(result.message);
-        outputChannel.appendLine(`Files synced successfully: ${result.message}`);
-      } else {
-        if (result.message.includes("Project not initialized")) {
-          const init = await vscode.window.showErrorMessage(result.message, "Initialize Project");
-          if (init) {
-            await vscode.commands.executeCommand("claudesync.initProject");
+    const maxRetries = 20; // Maximum number of retries
+    let attempt = 0;
+    let success = false;
+
+    await vscode.window.withProgress(
+      {
+        location: vscode.ProgressLocation.Notification,
+        title: "Syncing files with Claude AI",
+        cancellable: false,
+      },
+      async (progress) => {
+        while (attempt < maxRetries && !success) {
+          try {
+            outputChannel.appendLine(`Syncing ${files.length} files... (Attempt ${attempt + 1}/${maxRetries})`);
+            const result = await syncManager.syncFiles(files);
+            
+            if (result.success) {
+              success = true;
+              outputChannel.appendLine(`Files synced successfully: ${result.message}`);
+            } else if (result.message.includes("Project not initialized")) {
+              const init = await vscode.window.showErrorMessage(result.message, "Initialize Project");
+              if (init) {
+                await vscode.commands.executeCommand("claudesync.initProject");
+              }
+              return;
+            } else {
+              const errorMsg = result.error ? `${result.message}: ${result.error.message}` : result.message;
+              outputChannel.appendLine(`Failed to sync files: ${errorMsg}`);
+              if (attempt < maxRetries - 1) {
+                await new Promise(resolve => setTimeout(resolve, 150)); // Wait 100ms before retrying
+                attempt++;
+                progress.report({ message: `Retrying sync... (Attempt ${attempt + 1}/${maxRetries})` });
+              }
+            }
+          } catch (error) {
+            const errorMsg = `Failed to sync files: ${error instanceof Error ? error.message : String(error)}`;
+            outputChannel.appendLine(`Error: ${errorMsg}`);
+            if (error instanceof Error && error.stack) {
+              outputChannel.appendLine(`Stack trace: ${error.stack}`);
+            }
+            if (attempt < maxRetries - 1) {
+              await new Promise(resolve => setTimeout(resolve, 100)); // Wait 100ms before retrying
+              attempt++;
+              progress.report({ message: `Retrying sync... (Attempt ${attempt + 1}/${maxRetries})` });
+            }
           }
-        } else {
-          const errorMsg = result.error ? `${result.message}: ${result.error.message}` : result.message;
-          outputChannel.appendLine(`Failed to sync files: ${errorMsg}`);
-          vscode.window.showErrorMessage(errorMsg);
+        }
+
+        if (success) {
+          vscode.window.showInformationMessage("Files synced successfully");
         }
       }
-    } catch (error) {
-      const errorMsg = `Failed to sync files: ${error instanceof Error ? error.message : String(error)}`;
-      outputChannel.appendLine(`Error: ${errorMsg}`);
-      if (error instanceof Error && error.stack) {
-        outputChannel.appendLine(`Stack trace: ${error.stack}`);
-      }
-      vscode.window.showErrorMessage(errorMsg);
-    }
+    );
   }
 
   // command to set Claude session token
