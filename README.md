@@ -8,7 +8,7 @@ Seamlessly integrate your VS Code workspace with Claude.ai projects. ClaudeSync 
 
 ### 1. Install the Extension
 
-You can install ClaudeSync directly from the [VS Code Marketplace](https://marketplace.visualstudio.com/PLACEHOLDER)!
+You can install ClaudeSync directly from the [VS Code Marketplace](https://marketplace.visualstudio.com/items?itemName=rexdotsh.claudesync)!
 
 ### 2. Get Your Claude Token
 
