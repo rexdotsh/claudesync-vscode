@@ -4,12 +4,22 @@
   "description": "Sync your code with Claude.ai Projects",
   "publisher": "rexdotsh",
   "version": "0.0.1",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/rexdotsh/claudesync"
+  },
+  "homepage": "https://github.com/rexdotsh/claudesync",
   "engines": {
     "vscode": "^1.96.0"
   },
   "categories": [
+    "Programming Languages",
+    "AI",
     "Other"
   ],
+  "galleryBanner": {
+    "theme": "dark"
+  },
   "activationEvents": [
     "onStartupFinished"
   ],
