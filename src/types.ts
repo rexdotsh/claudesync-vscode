@@ -10,6 +10,7 @@ export interface WorkspaceConfig {
   autoSync: boolean;
   autoSyncDelay: number; // in seconds
   syncOnStartup: boolean;
+  cleanupRemoteFiles: boolean; // whether to remove remote files that don't exist locally
 }
 
 export interface ClaudeSyncConfig extends GlobalConfig, WorkspaceConfig {}

@@ -36,8 +36,7 @@
       },
       {
         "command": "claudesync.syncProjectInstructions",
-        "title": "ClaudeSync: Sync Project Instructions",
-        "icon": "resources/instructions.svg"
+        "title": "ClaudeSync: Sync Project Instructions"
       },
       {
         "command": "claudesync.configureAutoSync",
@@ -46,6 +45,10 @@
       {
         "command": "claudesync.configureStartupSync",
         "title": "ClaudeSync: Configure Startup Sync"
+      },
+      {
+        "command": "claudesync.configureCleanupRemote",
+        "title": "ClaudeSync: Configure Remote File Cleanup"
       },
       {
         "command": "claudesync.openInBrowser",
@@ -63,23 +66,22 @@
       {
         "command": "claudesync.includeInSync",
         "title": "ClaudeSync: Include in Sync"
+      },
+      {
+        "command": "claudesync.showOutput",
+        "title": "ClaudeSync: Show Output Channel"
       }
     ],
     "menus": {
       "explorer/context": [
         {
-          "command": "claudesync.syncProjectInstructions",
-          "group": "claudesync@1",
-          "when": "resourceFilename == .projectinstructions"
-        },
-        {
           "command": "claudesync.excludeFromSync",
-          "group": "claudesync@2",
+          "group": "claudesync@1",
           "when": "resourceScheme == file && resourceFilename != .projectinstructions"
         },
         {
           "command": "claudesync.includeInSync",
-          "group": "claudesync@3",
+          "group": "claudesync@2",
           "when": "resourceScheme == file && resourceFilename != .projectinstructions"
         }
       ],
@@ -101,12 +103,6 @@
           "group": "navigation@-4",
           "when": "resourceLangId",
           "icon": "resources/browser.svg"
-        },
-        {
-          "command": "claudesync.syncProjectInstructions",
-          "group": "navigation@-3",
-          "when": "resourceFilename == .projectinstructions",
-          "icon": "resources/instructions.svg"
         },
         {
           "command": "claudesync.syncCurrentFile",
@@ -146,13 +142,41 @@
           "default": false,
           "description": "Automatically sync workspace when VS Code starts"
         },
+        "claudesync.maxFileSize": {
+          "type": "number",
+          "default": 2097152,
+          "description": "Maximum file size in bytes (default 2MB)"
+        },
         "claudesync.excludePatterns": {
           "type": "array",
           "items": {
             "type": "string"
           },
-          "default": ["node_modules/**", "dist/**", ".git/**"],
+          "default": [
+            "node_modules/**",
+            ".git/**",
+            "dist/**",
+            "build/**",
+            "**/*.pyc",
+            "**/__pycache__/**",
+            ".env",
+            ".env.*",
+            "package-lock.json",
+            "yarn.lock",
+            "pnpm-lock.yaml",
+            "poetry.lock",
+            "bun.lockb",
+            "cargo.lock",
+            ".projectinstructions",
+            ".vscode",
+            ".gitignore"
+          ],
           "description": "Patterns to exclude from syncing"
+        },
+        "claudesync.cleanupRemoteFiles": {
+          "type": "boolean",
+          "default": false,
+          "description": "Remove files from Claude project that don't exist in local workspace"
         }
       }
     }
@@ -186,6 +210,7 @@
     "eslint": "^9.16.0",
     "npm-run-all": "^4.1.5",
     "ts-loader": "^9.5.1",
-    "typescript": "^5.7.2"
+    "typescript": "^5.7.2",
+    "webpack-cli": "^6.0.1"
   }
 }

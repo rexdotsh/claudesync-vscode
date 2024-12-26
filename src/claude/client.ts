@@ -19,6 +19,18 @@ export interface FileDoc {
   created_at: string;
 }
 
+interface OrganizationResponse {
+  uuid: string;
+  name: string;
+  capabilities: string[];
+}
+
+interface ProjectResponse {
+  uuid: string;
+  name: string;
+  archived_at?: string;
+}
+
 export class ClaudeClient {
   private readonly baseUrl = "https://api.claude.ai/api";
   private readonly sessionToken: string;
@@ -93,7 +105,7 @@ export class ClaudeClient {
   }
 
   async getOrganizations(): Promise<Organization[]> {
-    const response = await this.makeRequest<any[]>("GET", "/organizations");
+    const response = await this.makeRequest<OrganizationResponse[]>("GET", "/organizations");
 
     return response
       .filter(
@@ -108,7 +120,7 @@ export class ClaudeClient {
   }
 
   async getProjects(organizationId: string, includeArchived = false): Promise<Project[]> {
-    const response = await this.makeRequest<any[]>("GET", `/organizations/${organizationId}/projects`);
+    const response = await this.makeRequest<ProjectResponse[]>("GET", `/organizations/${organizationId}/projects`);
 
     return response
       .filter((project) => includeArchived || !project.archived_at)
@@ -125,7 +137,7 @@ export class ClaudeClient {
       description,
       is_private: true,
     };
-    const response = await this.makeRequest<any>("POST", `/organizations/${organizationId}/projects`, data);
+    const response = await this.makeRequest<ProjectResponse>("POST", `/organizations/${organizationId}/projects`, data);
 
     return {
       id: response.uuid,
@@ -135,7 +147,14 @@ export class ClaudeClient {
   }
 
   async listFiles(organizationId: string, projectId: string): Promise<FileDoc[]> {
-    const response = await this.makeRequest<any[]>(
+    interface FileDocResponse {
+      uuid: string;
+      file_name: string;
+      content: string;
+      created_at: string;
+    }
+
+    const response = await this.makeRequest<FileDocResponse[]>(
       "GET",
       `/organizations/${organizationId}/projects/${projectId}/docs`
     );

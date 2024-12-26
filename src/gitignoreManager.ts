@@ -77,11 +77,20 @@ export class GitignoreManager {
   }
 
   public shouldIgnore(filePath: string): boolean {
-    return this.patterns.some(({ pattern, isDirectory }) => {
+    let shouldIgnore = false;
+
+    // process patterns in order, with negations overriding previous matches
+    for (const { pattern, isDirectory } of this.patterns) {
       if (pattern.startsWith("!")) {
-        return false; // skip negated patterns for now
+        // if a negated pattern matches, the file should NOT be ignored
+        if (GitignoreManager.isMatch(pattern.slice(1), filePath, isDirectory)) {
+          shouldIgnore = false;
+        }
+      } else if (GitignoreManager.isMatch(pattern, filePath, isDirectory)) {
+        shouldIgnore = true;
       }
-      return GitignoreManager.isMatch(pattern, filePath, isDirectory);
-    });
+    }
+
+    return shouldIgnore;
   }
 }

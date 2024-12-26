@@ -15,7 +15,7 @@ export class SyncManager {
   private gitignoreManager: GitignoreManager;
 
   private readonly MAX_RETRIES = 10;
-  private readonly RETRY_DELAY = 2000; // 2s
+  private readonly RETRY_DELAY = 1000; // 1s
 
   constructor(config: ClaudeSyncConfig, outputChannel: vscode.OutputChannel, configManager: ConfigManager) {
     this.config = config;
@@ -127,7 +127,7 @@ export class SyncManager {
   public async initializeProject(): Promise<SyncResult> {
     return this.handleError("initialize project", async () => {
       let retryCount = 0;
-      
+
       return vscode.window.withProgress(
         {
           location: vscode.ProgressLocation.Notification,
@@ -188,18 +188,17 @@ export class SyncManager {
                 success: true,
                 message: successMessage,
               };
-
             } catch (error) {
               retryCount++;
               if (retryCount === this.MAX_RETRIES) {
                 throw error;
               }
-              
-              progress.report({ 
-                message: `Attempt ${retryCount} failed. Retrying in ${this.RETRY_DELAY/1000}s...` 
+
+              progress.report({
+                message: `Attempt ${retryCount} failed. Retrying in ${this.RETRY_DELAY / 1000}s...`,
               });
-              
-              await new Promise(resolve => setTimeout(resolve, this.RETRY_DELAY));
+
+              await new Promise((resolve) => setTimeout(resolve, this.RETRY_DELAY));
             }
           }
 
@@ -235,6 +234,7 @@ export class SyncManager {
       const existingFiles = await this.claudeClient.listFiles(this.currentOrg!.id, this.currentProject!.id);
       let skipped = 0;
       let synced = 0;
+      let deleted = 0;
 
       await vscode.window.withProgress(
         {
@@ -246,6 +246,7 @@ export class SyncManager {
           const total = fileContents.length;
           let current = 0;
 
+          // First, sync all local files
           for (const file of fileContents) {
             progress.report({
               message: `${++current}/${total}: ${file.path}`,
@@ -273,8 +274,30 @@ export class SyncManager {
             synced++;
           }
 
+          // Then, if cleanupRemoteFiles is enabled, remove any remote files that don't exist locally
+          if (this.config.cleanupRemoteFiles) {
+            progress.report({ message: "Cleaning up remote files..." });
+
+            const localFilePaths = new Set(fileContents.map((f) => f.path));
+            const filesToDelete = existingFiles.filter((f) => !localFilePaths.has(f.file_name));
+
+            for (const file of filesToDelete) {
+              // Skip files that match exclude patterns
+              if (this.shouldExcludeFile(file.file_name)) {
+                continue;
+              }
+
+              await this.claudeClient.deleteFile(this.currentOrg!.id, this.currentProject!.id, file.uuid);
+              deleted++;
+              this.outputChannel.appendLine(`Deleted remote file: ${file.file_name}`);
+            }
+          }
+
           if (skipped > 0) {
             this.outputChannel.appendLine(`Skipped ${skipped} unchanged files`);
+          }
+          if (deleted > 0) {
+            this.outputChannel.appendLine(`Deleted ${deleted} remote files`);
           }
         }
       );
@@ -283,10 +306,11 @@ export class SyncManager {
         success: true,
         message: `Successfully synced ${fileContents.length} file${fileContents.length === 1 ? "" : "s"} with Claude${
           skipped > 0 ? ` (${skipped} unchanged file${skipped === 1 ? "" : "s"} skipped)` : ""
-        }`,
+        }${deleted > 0 ? ` and removed ${deleted} remote file${deleted === 1 ? "" : "s"}` : ""}`,
         data: {
           syncedFiles: synced,
           skippedFiles: skipped,
+          deletedFiles: deleted,
           totalFiles: fileContents.length,
         },
       };
@@ -405,29 +429,5 @@ export class SyncManager {
 
     // check gitignore patterns
     return this.gitignoreManager.shouldIgnore(filePath);
-  }
-
-  public async deleteRemoteFile(filePath: string): Promise<SyncResult> {
-    return this.handleError("delete remote file", async () => {
-      const projectResult = await this.ensureProjectAndOrg();
-      if (!projectResult.success) {
-        return projectResult;
-      }
-
-      const files = await this.claudeClient.listFiles(this.currentOrg!.id, this.currentProject!.id);
-      const existingFile = files.find(f => f.file_name === filePath);
-      
-      if (!existingFile) {
-        return { success: true, message: "File not found in remote project" };
-      }
-
-      await this.claudeClient.deleteFile(
-        this.currentOrg!.id,
-        this.currentProject!.id,
-        existingFile.uuid
-      );
-
-      return { success: true, message: "File deleted from remote project" };
-    });
   }
 }
