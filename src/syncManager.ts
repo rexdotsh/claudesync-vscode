@@ -281,23 +281,32 @@ export class SyncManager {
             const localFilePaths = new Set(fileContents.map((f) => f.path));
             const filesToDelete = existingFiles.filter((f) => !localFilePaths.has(f.file_name));
 
-            for (const file of filesToDelete) {
-              // Skip files that match exclude patterns
-              if (this.shouldExcludeFile(file.file_name)) {
-                continue;
+            if (filesToDelete.length > 0) {
+              this.outputChannel.appendLine(
+                `Found ${filesToDelete.length} remote files to delete: ${filesToDelete
+                  .map((f) => f.file_name)
+                  .join(", ")}`
+              );
+
+              for (const file of filesToDelete) {
+                try {
+                  await this.claudeClient.deleteFile(this.currentOrg!.id, this.currentProject!.id, file.uuid);
+                  deleted++;
+                } catch (error) {
+                  this.outputChannel.appendLine(
+                    `Failed to delete ${file.file_name}: ${error instanceof Error ? error.message : String(error)}`
+                  );
+                }
               }
 
-              await this.claudeClient.deleteFile(this.currentOrg!.id, this.currentProject!.id, file.uuid);
-              deleted++;
-              this.outputChannel.appendLine(`Deleted remote file: ${file.file_name}`);
+              if (deleted > 0) {
+                this.outputChannel.appendLine(`Successfully deleted ${deleted} remote files`);
+              }
             }
           }
 
           if (skipped > 0) {
             this.outputChannel.appendLine(`Skipped ${skipped} unchanged files`);
-          }
-          if (deleted > 0) {
-            this.outputChannel.appendLine(`Deleted ${deleted} remote files`);
           }
         }
       );
