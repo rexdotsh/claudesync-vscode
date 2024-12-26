@@ -5,7 +5,7 @@
   "tasks": [
     {
       "label": "watch",
-      "dependsOn": ["pnpm: watch:tsc", "pnpm: watch:esbuild"],
+      "dependsOn": ["yarn: watch:tsc", "yarn: watch:esbuild"],
       "presentation": {
         "reveal": "never"
       },
@@ -17,12 +17,12 @@
     },
     {
       "type": "shell",
-      "command": "pnpm",
+      "command": "yarn",
       "args": ["run", "watch:esbuild"],
       "group": "build",
       "problemMatcher": "$esbuild-watch",
       "isBackground": true,
-      "label": "pnpm: watch:esbuild",
+      "label": "yarn: watch:esbuild",
       "presentation": {
         "group": "watch",
         "reveal": "never"
@@ -30,12 +30,12 @@
     },
     {
       "type": "shell",
-      "command": "pnpm",
+      "command": "yarn",
       "args": ["run", "watch:tsc"],
       "group": "build",
       "problemMatcher": "$tsc-watch",
       "isBackground": true,
-      "label": "pnpm: watch:tsc",
+      "label": "yarn: watch:tsc",
       "presentation": {
         "group": "watch",
         "reveal": "never"
@@ -43,7 +43,7 @@
     },
     {
       "type": "shell",
-      "command": "pnpm",
+      "command": "yarn",
       "args": ["run", "watch-tests"],
       "problemMatcher": "$tsc-watch",
       "isBackground": true,
@@ -52,11 +52,11 @@
         "group": "watchers"
       },
       "group": "build",
-      "label": "pnpm: watch-tests"
+      "label": "yarn: watch-tests"
     },
     {
       "label": "tasks: watch-tests",
-      "dependsOn": ["pnpm: watch", "pnpm: watch-tests"],
+      "dependsOn": ["yarn: watch", "yarn: watch-tests"],
       "problemMatcher": []
     }
   ]
