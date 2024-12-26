@@ -459,6 +459,49 @@ export async function activate(context: vscode.ExtensionContext) {
     }
   );
 
+  // update project instructions
+  const updateProjectInstructionsCommand = vscode.commands.registerCommand(
+    "claudesync.updateProjectInstructions",
+    async () => {
+      const config = await configManager.getConfig();
+      if (!config.sessionToken) {
+        const setToken = await vscode.window.showErrorMessage(
+          "Please set your Claude session token first",
+          "Set Token"
+        );
+        if (setToken) {
+          await vscode.commands.executeCommand("claudesync.setToken");
+          return;
+        }
+        return;
+      }
+
+      try {
+        const result = await syncManager.syncProjectInstructions();
+        if (result.success) {
+          const message = result.message || "Project instructions updated successfully";
+          vscode.window.showInformationMessage(message);
+          outputChannel.appendLine(message);
+        } else {
+          const errorMsg = result.error
+            ? `${result.message || "Error"}: ${result.error.message}`
+            : result.message || "Unknown error";
+          outputChannel.appendLine(`Failed to update project instructions: ${errorMsg}`);
+          vscode.window.showErrorMessage(errorMsg);
+        }
+      } catch (error) {
+        const errorMsg = `Failed to update project instructions: ${
+          error instanceof Error ? error.message : String(error)
+        }`;
+        outputChannel.appendLine(`Error: ${errorMsg}`);
+        if (error instanceof Error && error.stack) {
+          outputChannel.appendLine(`Stack trace: ${error.stack}`);
+        }
+        vscode.window.showErrorMessage(errorMsg);
+      }
+    }
+  );
+
   // command to open project in browser
   const openInBrowserCommand = vscode.commands.registerCommand("claudesync.openInBrowser", async () => {
     const config = await configManager.getConfig();
@@ -629,6 +672,7 @@ export async function activate(context: vscode.ExtensionContext) {
     syncCurrentFileCommand,
     syncWorkspaceCommand,
     syncProjectInstructionsCommand,
+    updateProjectInstructionsCommand,
     configureAutoSyncCommand,
     configureStartupSyncCommand,
     configureCleanupRemoteCommand,
