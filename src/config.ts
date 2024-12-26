@@ -108,7 +108,7 @@ export class ConfigManager {
     const config = vscode.workspace.getConfiguration("claudesync");
     return {
       excludePatterns: config.get("excludePatterns") || this.getDefaultExcludePatterns(),
-      maxFileSize: config.get("maxFileSize") || 2097152, // Default 2MB from VSCode settings
+      maxFileSize: config.get("maxFileSize") || 2097152, // 2MB
       autoSync: config.get("autoSync") || false,
       autoSyncDelay: config.get("autoSyncInterval") || 30,
       syncOnStartup: config.get("syncOnStartup") || false,

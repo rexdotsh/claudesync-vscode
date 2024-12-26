@@ -36,16 +36,21 @@ To connect ClaudeSync with your Claude.ai account, you'll need your session toke
 
 Access these commands through the Command Palette (`Ctrl+Shift+P` or `Cmd+Shift+P`):
 
-| Command                                 | Description                                   |
-| --------------------------------------- | --------------------------------------------- |
-| `ClaudeSync: Set Token`                 | Configure your Claude session token           |
-| `ClaudeSync: Initialize Project`        | Set up a new Claude project for the workspace |
-| `ClaudeSync: Sync Current File`         | Sync the active file                          |
-| `ClaudeSync: Sync Workspace`            | Sync all workspace files                      |
-| `ClaudeSync: Configure Auto-sync`       | Manage automatic file syncing                 |
-| `ClaudeSync: Configure Startup Sync`    | Control syncing on VS Code startup            |
-| `ClaudeSync: Sync Project Instructions` | Update project instructions                   |
-| `ClaudeSync: Open in Browser`           | View project in Claude.ai's Web UI            |
+| Command                                     | Description                                   |
+| ------------------------------------------- | --------------------------------------------- |
+| `ClaudeSync: Set Token`                     | Configure your Claude session token           |
+| `ClaudeSync: Initialize Project`            | Set up a new Claude project for the workspace |
+| `ClaudeSync: Sync Current File`             | Sync the active file                          |
+| `ClaudeSync: Sync Workspace`                | Sync all workspace files                      |
+| `ClaudeSync: Configure Auto-sync`           | Manage automatic file syncing                 |
+| `ClaudeSync: Configure Startup Sync`        | Control syncing on VS Code startup            |
+| `ClaudeSync: Sync Project Instructions`     | Update project instructions                   |
+| `ClaudeSync: Open in Browser`               | View project in Claude.ai's Web UI            |
+| `ClaudeSync: Configure Remote File Cleanup` | Configure cleanup of remote files             |
+| `ClaudeSync: Show Current Settings`         | Display current extension settings            |
+| `ClaudeSync: Exclude from Sync`             | Exclude specific files from syncing           |
+| `ClaudeSync: Include in Sync`               | Include previously excluded files in syncing  |
+| `ClaudeSync: Show Output Channel`           | Show the extension's output/logs              |
 
 ## Configuration
 
@@ -55,26 +60,32 @@ Customize ClaudeSync through `.vscode/claudesync.json`:
 {
   "excludePatterns": [
     "node_modules/**",
+    ".git/**",
     "dist/**",
-    ".git/**"
-    // ... other patterns
+    "build/**",
+    "**/*.pyc",
+    "**/__pycache__/**",
+    ".env"
+    // ... many other patterns
   ],
-  "maxFileSize": 1048576, // 1MB
+  "maxFileSize": 2097152, // 2MB
   "autoSync": false,
   "autoSyncDelay": 30,
-  "syncOnStartup": false
+  "syncOnStartup": false,
+  "cleanupRemoteFiles": false
 }
 ```
 
 ### Configuration Options
 
-| Option            | Description                      | Default   |
-| ----------------- | -------------------------------- | --------- |
-| `excludePatterns` | Glob patterns for excluded files | `[]`      |
-| `maxFileSize`     | Maximum file size (bytes)        | `1048576` |
-| `autoSync`        | Enable automatic syncing         | `false`   |
-| `autoSyncDelay`   | Sync delay (seconds)             | `30`      |
-| `syncOnStartup`   | Sync when VS Code starts         | `false`   |
+| Option               | Description                                             | Default           |
+| -------------------- | ------------------------------------------------------- | ----------------- |
+| `excludePatterns`    | Glob patterns for excluded files                        | See example above |
+| `maxFileSize`        | Maximum file size in bytes                              | `2097152` (2MB)   |
+| `autoSync`           | Enable automatic file syncing                           | `false`           |
+| `autoSyncDelay`      | Delay in seconds between auto-syncs (min: 10, max: 180) | `30`              |
+| `syncOnStartup`      | Sync workspace when VS Code starts                      | `false`           |
+| `cleanupRemoteFiles` | Remove remote files that don't exist locally            | `false`           |
 
 ## Project Instructions
 
