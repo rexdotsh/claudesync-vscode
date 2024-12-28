@@ -11,10 +11,18 @@ export class GitManager {
 
   /**
    * Ensures that .vscode/claudesync.json is added to .gitignore if the project is a git repository
+   * and the addToGitignore setting is enabled
    */
   public async ensureGitIgnore(): Promise<void> {
     const workspaceFolder = vscode.workspace.workspaceFolders?.[0];
     if (!workspaceFolder) {
+      return;
+    }
+
+    // Check if addToGitignore is enabled
+    const config = vscode.workspace.getConfiguration("claudesync");
+    const addToGitignore = config.get<boolean>("addToGitignore") || false;
+    if (!addToGitignore) {
       return;
     }
 
@@ -57,6 +65,6 @@ export class GitManager {
   private addClaudeSyncIgnore(content: string): string {
     // ensure content ends with newline
     const normalizedContent = content.endsWith("\n") ? content : content + "\n";
-    return normalizedContent + "\n" + GitManager.CLAUDESYNC_IGNORE + "\n";
+    return normalizedContent + GitManager.CLAUDESYNC_IGNORE + "\n";
   }
 }

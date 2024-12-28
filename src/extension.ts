@@ -1,5 +1,6 @@
 import * as vscode from "vscode";
 import { ConfigManager } from "./config";
+import { GitManager } from "./gitManager";
 import { SyncManager } from "./syncManager";
 import { SyncResult } from "./types";
 
@@ -151,23 +152,12 @@ export async function activate(context: vscode.ExtensionContext) {
   const configureStartupSyncCommand = vscode.commands.registerCommand(
     "claudesync.configureStartupSync",
     async (): Promise<void> => {
-      const config = await configManager.getConfig();
+      const config = vscode.workspace.getConfiguration("claudesync");
+      const currentValue = config.get<boolean>("syncOnStartup") || false;
 
-      const enableStartupSync = await vscode.window.showQuickPick(["Enable", "Disable"], {
-        placeHolder: "Enable or disable sync on startup?",
-      });
+      await config.update("syncOnStartup", !currentValue, true);
 
-      if (!enableStartupSync) {
-        return;
-      }
-
-      await configManager.saveWorkspaceConfig({
-        syncOnStartup: enableStartupSync === "Enable",
-      });
-
-      vscode.window.showInformationMessage(
-        `Sync on startup ${enableStartupSync === "Enable" ? "enabled" : "disabled"}`
-      );
+      vscode.window.showInformationMessage(`Sync on startup is now ${!currentValue ? "enabled" : "disabled"}`);
     }
   );
 
@@ -666,6 +656,22 @@ export async function activate(context: vscode.ExtensionContext) {
     outputChannel.show();
   });
 
+  // command to toggle gitignore setting
+  const toggleGitignoreCommand = vscode.commands.registerCommand("claudesync.toggleGitignore", async () => {
+    const config = vscode.workspace.getConfiguration("claudesync");
+    const currentValue = config.get<boolean>("addToGitignore") || false;
+
+    await config.update("addToGitignore", !currentValue, true);
+
+    // If we're enabling it, ensure gitignore is updated
+    if (!currentValue) {
+      await configManager.getConfig(); // Force config refresh
+      await new GitManager(outputChannel).ensureGitIgnore();
+    }
+
+    vscode.window.showInformationMessage(`Auto-add to gitignore is now ${!currentValue ? "enabled" : "disabled"}`);
+  });
+
   context.subscriptions.push(
     setTokenCommand,
     initProjectCommand,
@@ -679,7 +685,8 @@ export async function activate(context: vscode.ExtensionContext) {
     openInBrowserCommand,
     excludeFromSyncCommand,
     includeInSyncCommand,
-    showOutputCommand
+    showOutputCommand,
+    toggleGitignoreCommand
   );
 
   // add file watcher to disposables if it exists

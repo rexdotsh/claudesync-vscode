@@ -1,5 +1,6 @@
 export interface GlobalConfig {
   sessionToken: string;
+  addToGitignore: boolean;
 }
 
 export interface WorkspaceConfig {
@@ -10,7 +11,7 @@ export interface WorkspaceConfig {
   autoSync: boolean;
   autoSyncDelay: number; // in seconds
   syncOnStartup: boolean;
-  cleanupRemoteFiles: boolean; // whether to remove remote files that don't exist locally
+  cleanupRemoteFiles: boolean;
 }
 
 export interface ClaudeSyncConfig extends GlobalConfig, WorkspaceConfig {}

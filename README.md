@@ -86,6 +86,7 @@ Customize ClaudeSync through `.vscode/claudesync.json`:
 | `autoSyncDelay`      | Delay in seconds between auto-syncs (min: 10, max: 180) | `30`              |
 | `syncOnStartup`      | Sync workspace when VS Code starts                      | `false`           |
 | `cleanupRemoteFiles` | Remove remote files that don't exist locally            | `false`           |
+| `addToGitignore`     | Automatically add claudesync.json to .gitignore         | `true`            |
 
 ## Project Instructions
 

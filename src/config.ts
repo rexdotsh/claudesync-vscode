@@ -27,6 +27,7 @@ export class ConfigManager {
     const config = vscode.workspace.getConfiguration("claudesync");
     return {
       sessionToken: config.get("sessionToken") || "",
+      addToGitignore: config.get("addToGitignore") || true,
     };
   }
 

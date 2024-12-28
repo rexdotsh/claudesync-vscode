@@ -18,6 +18,7 @@
     "Other"
   ],
   "galleryBanner": {
+    "color": "#272725",
     "theme": "dark"
   },
   "activationEvents": [
@@ -54,7 +55,7 @@
       },
       {
         "command": "claudesync.configureStartupSync",
-        "title": "ClaudeSync: Configure Startup Sync"
+        "title": "ClaudeSync: Toggle Sync on Startup"
       },
       {
         "command": "claudesync.configureCleanupRemote",
@@ -85,6 +86,10 @@
         "command": "claudesync.updateProjectInstructions",
         "title": "ClaudeSync: Update Project Instructions",
         "icon": "resources/update.svg"
+      },
+      {
+        "command": "claudesync.toggleGitignore",
+        "title": "ClaudeSync: Toggle Auto-Add to Gitignore"
       }
     ],
     "menus": {
@@ -204,6 +209,11 @@
           "type": "boolean",
           "default": false,
           "description": "Remove files from Claude project that don't exist in local workspace"
+        },
+        "claudesync.addToGitignore": {
+          "type": "boolean",
+          "default": true,
+          "description": "Automatically add claudesync.json to .gitignore"
         }
       }
     }
