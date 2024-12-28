@@ -1,8 +1,26 @@
-# ClaudeSync
+<!-- LOGO -->
+<h1>
+<p align="center">
+  <img src="assets/logo.png" alt="Logo" width="128" style="border-radius: 15px;">
+  <br>ClaudeSync
+</h1>
+  <p align="center">
+    Sync your code with Claude.ai Projects without leaving your IDE.
+    <br />
+    <a href="https://marketplace.visualstudio.com/items?itemName=rexdotsh.claudesync">Download</a>
+    ·
+    <a href="#quick-start-guide">Quick Start</a>
+    ·
+    <a href="#configuration">Configuration</a>
+    ·
+    <a href="#contributing">Contributing</a>
+  </p>
+</p>
 
 Seamlessly integrate your VS Code workspace with Claude.ai projects. ClaudeSync keeps your local files in perfect harmony with your Claude.ai conversations, making it easier than ever to collaborate with Claude on your development projects.
 
-> This extension requires a Claude.ai account with the Pro plan.
+> [!NOTE]
+> This extension requires a Claude.ai account with the **Pro** plan.
 
 ## Quick Start Guide
 
@@ -102,4 +120,5 @@ ClaudeSync is open source software licensed under the MIT License. See the [LICE
 
 ---
 
-> ⚠️ Note: This extension is not officially affiliated with Anthropic's Claude.ai service.
+> [!WARNING]
+> This extension is not officially affiliated with Anthropic's Claude.ai service.
