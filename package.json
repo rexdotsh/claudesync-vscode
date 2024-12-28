@@ -4,7 +4,7 @@
   "description": "Sync your code with Claude.ai Projects",
   "publisher": "rexdotsh",
   "version": "0.0.3",
-  "icon": "src/assets/icon.png",
+  "icon": "assets/logo.png",
   "repository": {
     "type": "git",
     "url": "https://github.com/rexdotsh/claudesync"
