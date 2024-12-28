@@ -4,6 +4,7 @@
   "description": "Sync your code with Claude.ai Projects",
   "publisher": "rexdotsh",
   "version": "0.0.2",
+  "icon": "src/assets/icon.png",
   "repository": {
     "type": "git",
     "url": "https://github.com/rexdotsh/claudesync"
@@ -38,12 +39,12 @@
       {
         "command": "claudesync.syncCurrentFile",
         "title": "ClaudeSync: Sync Current File",
-        "icon": "resources/sync.svg"
+        "icon": "src/resources/sync.svg"
       },
       {
         "command": "claudesync.syncWorkspace",
         "title": "ClaudeSync: Sync Workspace",
-        "icon": "resources/project.svg"
+        "icon": "src/resources/project.svg"
       },
       {
         "command": "claudesync.syncProjectInstructions",
@@ -64,7 +65,7 @@
       {
         "command": "claudesync.openInBrowser",
         "title": "ClaudeSync: Open Project in Browser",
-        "icon": "resources/browser.svg"
+        "icon": "src/resources/browser.svg"
       },
       {
         "command": "claudesync.showSettings",
@@ -85,7 +86,7 @@
       {
         "command": "claudesync.updateProjectInstructions",
         "title": "ClaudeSync: Update Project Instructions",
-        "icon": "resources/update.svg"
+        "icon": "src/resources/update.svg"
       },
       {
         "command": "claudesync.toggleGitignore",
@@ -122,31 +123,31 @@
           "command": "claudesync.openInBrowser",
           "group": "navigation@-4",
           "when": "resourceFilename == .projectinstructions",
-          "icon": "resources/browser.svg"
+          "icon": "src/resources/browser.svg"
         },
         {
           "command": "claudesync.updateProjectInstructions",
           "group": "navigation@-3",
           "when": "resourceFilename == .projectinstructions",
-          "icon": "resources/update.svg"
+          "icon": "src/resources/update.svg"
         },
         {
           "command": "claudesync.openInBrowser",
           "group": "navigation@-2",
           "when": "resourceLangId && resourceFilename != .projectinstructions",
-          "icon": "resources/browser.svg"
+          "icon": "src/resources/browser.svg"
         },
         {
           "command": "claudesync.syncCurrentFile",
           "group": "navigation@-3",
           "when": "resourceLangId && resourceFilename != .projectinstructions",
-          "icon": "resources/sync.svg"
+          "icon": "src/resources/sync.svg"
         },
         {
           "command": "claudesync.syncWorkspace",
           "group": "navigation@-2",
           "when": "resourceLangId && resourceFilename != .projectinstructions",
-          "icon": "resources/project.svg"
+          "icon": "src/resources/project.svg"
         }
       ]
     },
