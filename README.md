@@ -12,8 +12,6 @@
     <a href="#quick-start-guide">Quick Start</a>
     ·
     <a href="#configuration">Configuration</a>
-    ·
-    <a href="#contributing">Contributing</a>
   </p>
 </p>
 
