@@ -3,9 +3,9 @@
 <p align="center">
   <a href="https://marketplace.visualstudio.com/items?itemName=rexdotsh.claudesync" style="display: none;">
     <picture>
-      <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/rexdotsh/claudesync/main/assets/logo.png" width="128">
-      <source media="(prefers-color-scheme: light)" srcset="https://raw.githubusercontent.com/rexdotsh/claudesync/main/assets/logo.png" width="128">
-      <img src="https://raw.githubusercontent.com/rexdotsh/claudesync/main/assets/logo.png" alt="Logo">
+      <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/rexdotsh/claudesync-vscode/main/assets/logo.png" width="128">
+      <source media="(prefers-color-scheme: light)" srcset="https://raw.githubusercontent.com/rexdotsh/claudesync-vscode/main/assets/logo.png" width="128">
+      <img src="https://raw.githubusercontent.com/rexdotsh/claudesync-vscode/main/assets/logo.png" alt="Logo">
     </picture>
   </a>
   <br>ClaudeSync

@@ -7,9 +7,9 @@
   "icon": "assets/logo.png",
   "repository": {
     "type": "git",
-    "url": "https://github.com/rexdotsh/claudesync"
+    "url": "https://github.com/rexdotsh/claudesync-vscode"
   },
-  "homepage": "https://github.com/rexdotsh/claudesync",
+  "homepage": "https://github.com/rexdotsh/claudesync-vscode",
   "engines": {
     "vscode": "^1.90.0"
   },
