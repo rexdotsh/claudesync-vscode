@@ -3,7 +3,7 @@
   "displayName": "ClaudeSync",
   "description": "Sync your code with Claude.ai Projects",
   "publisher": "rexdotsh",
-  "version": "0.0.2",
+  "version": "0.0.3",
   "icon": "src/assets/icon.png",
   "repository": {
     "type": "git",
