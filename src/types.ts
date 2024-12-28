@@ -34,5 +34,7 @@ export interface SyncResult {
   success: boolean;
   message?: string;
   error?: Error;
-  data?: any;
+  data?: {
+    syncedFiles: number;
+  };
 }

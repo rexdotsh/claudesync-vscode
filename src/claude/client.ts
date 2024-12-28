@@ -39,7 +39,7 @@ export class ClaudeClient {
     this.sessionToken = config.sessionToken;
   }
 
-  private async makeRequest<T>(method: string, endpoint: string, data?: any): Promise<T> {
+  private async makeRequest<T>(method: string, endpoint: string, data?: Record<string, unknown>): Promise<T> {
     try {
       const url = `${this.baseUrl}${endpoint}`;
       console.log(`Making ${method} request to ${url}`);
@@ -181,11 +181,11 @@ export class ClaudeClient {
   }
 
   async deleteFile(organizationId: string, projectId: string, fileUuid: string): Promise<void> {
-    await this.makeRequest<void>("DELETE", `/organizations/${organizationId}/projects/${projectId}/docs/${fileUuid}`);
+    await this.makeRequest("DELETE", `/organizations/${organizationId}/projects/${projectId}/docs/${fileUuid}`);
   }
 
   async updateProjectPromptTemplate(organizationId: string, projectId: string, promptTemplate: string): Promise<void> {
-    await this.makeRequest<void>("PUT", `/organizations/${organizationId}/projects/${projectId}`, {
+    await this.makeRequest("PUT", `/organizations/${organizationId}/projects/${projectId}`, {
       prompt_template: promptTemplate,
     });
   }

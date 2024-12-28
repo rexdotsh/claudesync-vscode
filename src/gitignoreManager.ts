@@ -21,7 +21,7 @@ export class GitignoreManager {
     return path.replace(/\\/g, "/").replace(/^\/+|\/+$/g, "");
   }
 
-  public static isMatch(pattern: string, filePath: string, isDirectory: boolean = false): boolean {
+  public static isMatch(pattern: string, filePath: string, isDirectory = false): boolean {
     pattern = this.normalizePath(pattern);
     filePath = this.normalizePath(filePath);
 

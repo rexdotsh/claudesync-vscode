@@ -606,7 +606,7 @@ export async function activate(context: vscode.ExtensionContext) {
               const result = await syncManager.syncFiles([uri]);
 
               if (result.success) {
-                if (result.data?.syncedFiles > 0) {
+                if ((result.data?.syncedFiles ?? 0) > 0) {
                   vscode.window.showInformationMessage(
                     `${relativePath} included in sync and uploaded to Claude project`
                   );

@@ -47,7 +47,7 @@ export class SyncManager {
       if (typeof result === "object" && result !== null && "success" in result) {
         return result as SyncResult;
       }
-      return { success: true, data: result };
+      return { success: true, data: { syncedFiles: 0 } };
     } catch (error) {
       this.outputChannel.appendLine(`Error in ${operation}: ${error instanceof Error ? error.message : String(error)}`);
       if (error instanceof Error && error.stack) {
