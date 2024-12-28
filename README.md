@@ -15,6 +15,12 @@
   </p>
 </p>
 
+## About
+
+One of the most underrated features of Claude.ai are "projects". You can sync your code with a project, and then simply talk to Claude about your code, without needing to worry about supplying context. ChatGPT has a similar feature, but only works with their "4o" model as of now, and is not as good as Claude.
+
+This extension aims to make it easier to use Claude.ai projects by directly letting you sync your code from your IDE, with features like auto-syncing, exclude/include files, and more.
+
 ## Quick Start Guide
 
 > [!NOTE]
