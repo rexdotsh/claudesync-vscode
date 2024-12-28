@@ -131,13 +131,13 @@ export class SyncManager {
       return vscode.window.withProgress(
         {
           location: vscode.ProgressLocation.Notification,
-          title: "Initializing Claude Project",
+          title: "Initializing Project",
           cancellable: false,
         },
         async (progress) => {
           while (retryCount < this.MAX_RETRIES) {
             try {
-              progress.report({ message: "Getting organizations..." });
+              progress.report({ message: "Processing..." });
               const orgs = await this.claudeClient.getOrganizations();
               if (!orgs.length) {
                 return {
@@ -199,6 +199,7 @@ export class SyncManager {
               });
 
               await new Promise((resolve) => setTimeout(resolve, this.RETRY_DELAY));
+              progress.report({ message: "Initializing..." });
             }
           }
 
