@@ -1,7 +1,13 @@
-<!-- LOGO -->
+<!-- small hack to not make the logo show up in the marketplace -->
 <h1>
 <p align="center">
-  <img src="assets/logo.png" alt="Logo" width="128" style="border-radius: 15px;">
+  <a href="https://marketplace.visualstudio.com/items?itemName=rexdotsh.claudesync" style="display: none;">
+    <picture>
+      <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/rexdotsh/claudesync/main/assets/logo.png" width="128">
+      <source media="(prefers-color-scheme: light)" srcset="https://raw.githubusercontent.com/rexdotsh/claudesync/main/assets/logo.png" width="128">
+      <img src="https://raw.githubusercontent.com/rexdotsh/claudesync/main/assets/logo.png" alt="Logo">
+    </picture>
+  </a>
   <br>ClaudeSync
 </h1>
   <p align="center">
