@@ -312,7 +312,8 @@ export async function activate(context: vscode.ExtensionContext) {
   // command to set Claude session token
   const setTokenCommand = vscode.commands.registerCommand("claudesync.setToken", async () => {
     const token = await vscode.window.showInputBox({
-      prompt: "Enter your Claude session token",
+      prompt:
+        "Enter your Claude session token. [Click here for instructions](https://github.com/rexdotsh/claudesync-vscode?tab=readme-ov-file#quick-start-guide)",
       password: true,
       placeHolder: "sk-ant-...",
       validateInput: (value) => {

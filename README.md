@@ -5,7 +5,7 @@
   <br>ClaudeSync
 </h1>
   <p align="center">
-    Sync your code with Claude.ai Projects without leaving your IDE.
+    Sync your code easily with Claude.ai Projects without leaving your IDE.
     <br />
     <a href="https://marketplace.visualstudio.com/items?itemName=rexdotsh.claudesync">Download</a>
     ·
@@ -17,12 +17,10 @@
   </p>
 </p>
 
-Seamlessly integrate your VS Code workspace with Claude.ai projects. ClaudeSync keeps your local files in perfect harmony with your Claude.ai conversations, making it easier than ever to collaborate with Claude on your development projects.
+## Quick Start Guide
 
 > [!NOTE]
 > This extension requires a Claude.ai account with the **Pro** plan.
-
-## Quick Start Guide
 
 ### 1. Install the Extension
 
@@ -69,10 +67,12 @@ Access these commands through the Command Palette (`Ctrl+Shift+P` or `Cmd+Shift+
 | `ClaudeSync: Exclude from Sync`             | Exclude specific files from syncing           |
 | `ClaudeSync: Include in Sync`               | Include previously excluded files in syncing  |
 | `ClaudeSync: Show Output Channel`           | Show the extension's output/logs              |
+| `ClaudeSync: Update Project Instructions`   | Update project instructions in Claude.ai      |
+| `ClaudeSync: Toggle Auto-Add to Gitignore`  | Toggle automatic .gitignore management        |
 
 ## Configuration
 
-Customize ClaudeSync through `.vscode/claudesync.json`:
+Customize ClaudeSync through `.vscode/claudesync.json` for workspace settings and VS Code's settings for global options:
 
 ```json
 {
@@ -88,7 +88,7 @@ Customize ClaudeSync through `.vscode/claudesync.json`:
   ],
   "maxFileSize": 2097152, // 2MB
   "autoSync": false,
-  "autoSyncDelay": 30,
+  "autoSyncInterval": 30,
   "syncOnStartup": false,
   "cleanupRemoteFiles": false
 }
@@ -96,15 +96,16 @@ Customize ClaudeSync through `.vscode/claudesync.json`:
 
 ### Configuration Options
 
-| Option               | Description                                             | Default           |
-| -------------------- | ------------------------------------------------------- | ----------------- |
-| `excludePatterns`    | Glob patterns for excluded files                        | See example above |
-| `maxFileSize`        | Maximum file size in bytes                              | `2097152` (2MB)   |
-| `autoSync`           | Enable automatic file syncing                           | `false`           |
-| `autoSyncDelay`      | Delay in seconds between auto-syncs (min: 10, max: 180) | `30`              |
-| `syncOnStartup`      | Sync workspace when VS Code starts                      | `false`           |
-| `cleanupRemoteFiles` | Remove remote files that don't exist locally            | `false`           |
-| `addToGitignore`     | Automatically add claudesync.json to .gitignore         | `true`            |
+| Option               | Description                                             | Default           | Scope     |
+| -------------------- | ------------------------------------------------------- | ----------------- | --------- |
+| `sessionToken`       | Claude.ai session token for authentication              | `""`              | Global    |
+| `addToGitignore`     | Automatically add claudesync.json to .gitignore         | `true`            | Global    |
+| `excludePatterns`    | Glob patterns for excluded files                        | See example above | Workspace |
+| `maxFileSize`        | Maximum file size in bytes                              | `2097152` (2MB)   | Workspace |
+| `autoSync`           | Enable automatic file syncing                           | `false`           | Workspace |
+| `autoSyncInterval`   | Delay in seconds between auto-syncs (min: 10, max: 180) | `30`              | Workspace |
+| `syncOnStartup`      | Sync workspace when VS Code starts                      | `false`           | Workspace |
+| `cleanupRemoteFiles` | Remove remote files that don't exist locally            | `false`           | Workspace |
 
 ## Project Instructions
 
