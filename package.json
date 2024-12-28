@@ -19,8 +19,8 @@
     "Other"
   ],
   "galleryBanner": {
-    "color": "#272725",
-    "theme": "dark"
+    "color": "#fdf6f3",
+    "theme": "light"
   },
   "activationEvents": [
     "onStartupFinished"
