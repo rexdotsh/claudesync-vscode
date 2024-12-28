@@ -38,8 +38,7 @@
       },
       {
         "command": "claudesync.syncCurrentFile",
-        "title": "ClaudeSync: Sync Current File",
-        "icon": "resources/sync.svg"
+        "title": "ClaudeSync: Sync Current File"
       },
       {
         "command": "claudesync.syncWorkspace",
@@ -136,12 +135,6 @@
           "group": "navigation@-2",
           "when": "resourceLangId && resourceFilename != .projectinstructions",
           "icon": "resources/browser.svg"
-        },
-        {
-          "command": "claudesync.syncCurrentFile",
-          "group": "navigation@-3",
-          "when": "resourceLangId && resourceFilename != .projectinstructions",
-          "icon": "resources/sync.svg"
         },
         {
           "command": "claudesync.syncWorkspace",
