@@ -117,7 +117,7 @@ Customize ClaudeSync through `.vscode/claudesync.json` for workspace settings an
 | `autoSync`           | Enable automatic file syncing                           | `false`           | Workspace |
 | `autoSyncInterval`   | Delay in seconds between auto-syncs (min: 10, max: 180) | `30`              | Workspace |
 | `syncOnStartup`      | Sync workspace when VS Code starts                      | `false`           | Workspace |
-| `cleanupRemoteFiles` | Remove remote files that don't exist locally            | `false`           | Workspace |
+| `cleanupRemoteFiles` | Remove remote files that don't exist locally            | `true`            | Workspace |
 
 ## Project Instructions
 
