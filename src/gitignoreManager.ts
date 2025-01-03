@@ -1,5 +1,8 @@
 import * as vscode from "vscode";
 
+// TODO: make this spec compliant, something like https://github.com/mherrmann/gitignore_parser
+// BUGFIX: doesn't match patterns that start with /, like `/.next/*`
+
 export class GitignoreManager {
   private patterns: { pattern: string; isDirectory: boolean }[] = [];
   private outputChannel: vscode.OutputChannel;

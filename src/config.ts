@@ -108,34 +108,12 @@ export class ConfigManager {
   private getDefaultWorkspaceConfig(): WorkspaceConfig {
     const config = vscode.workspace.getConfiguration("claudesync");
     return {
-      excludePatterns: config.get("excludePatterns") || this.getDefaultExcludePatterns(),
+      excludePatterns: config.get("excludePatterns") || [],
       maxFileSize: config.get("maxFileSize") || 2097152, // 2MB
       autoSync: config.get("autoSync") || false,
       autoSyncDelay: config.get("autoSyncInterval") || 30,
       syncOnStartup: config.get("syncOnStartup") || false,
       cleanupRemoteFiles: config.get("cleanupRemoteFiles") || false,
     };
-  }
-
-  private getDefaultExcludePatterns(): string[] {
-    return [
-      "node_modules/**",
-      ".git/**",
-      "dist/**",
-      "build/**",
-      "**/*.pyc",
-      "**/__pycache__/**",
-      ".env",
-      ".env.*",
-      "package-lock.json",
-      "yarn.lock",
-      "pnpm-lock.yaml",
-      "poetry.lock",
-      "bun.lockb",
-      "cargo.lock",
-      ".projectinstructions",
-      ".vscode",
-      ".gitignore",
-    ];
   }
 }

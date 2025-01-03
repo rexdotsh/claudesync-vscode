@@ -3,7 +3,7 @@
   "displayName": "ClaudeSync",
   "description": "Sync your code with Claude.ai Projects",
   "publisher": "rexdotsh",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "icon": "assets/logo.png",
   "repository": {
     "type": "git",
@@ -183,6 +183,7 @@
             ".git/**",
             "dist/**",
             "build/**",
+            ".next/**",
             "**/*.pyc",
             "**/__pycache__/**",
             ".env",
@@ -195,7 +196,12 @@
             "cargo.lock",
             ".projectinstructions",
             ".vscode",
-            ".gitignore"
+            ".gitignore",
+            "*.svg",
+            "*.png",
+            "*.jpg",
+            "*.jpeg",
+            "*.gif"
           ],
           "description": "Patterns to exclude from syncing"
         },

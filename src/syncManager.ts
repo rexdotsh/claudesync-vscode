@@ -241,14 +241,19 @@ export class SyncManager {
         {
           location: vscode.ProgressLocation.Notification,
           title: "Uploading to Claude",
-          cancellable: false,
+          cancellable: true,
         },
-        async (progress) => {
+        async (progress, token) => {
           const total = fileContents.length;
           let current = 0;
 
           // First, sync all local files
           for (const file of fileContents) {
+            if (token.isCancellationRequested) {
+              this.outputChannel.appendLine("Upload cancelled by user");
+              return;
+            }
+
             progress.report({
               message: `${++current}/${total}: ${file.path}`,
               increment: (1 / total) * 100,
@@ -276,7 +281,7 @@ export class SyncManager {
           }
 
           // Then, if cleanupRemoteFiles is enabled, remove any remote files that don't exist locally
-          if (this.config.cleanupRemoteFiles) {
+          if (this.config.cleanupRemoteFiles && !token.isCancellationRequested) {
             progress.report({ message: "Cleaning up remote files..." });
 
             const localFilePaths = new Set(fileContents.map((f) => f.path));
