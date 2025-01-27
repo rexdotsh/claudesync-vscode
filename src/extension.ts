@@ -72,6 +72,15 @@ export async function activate(context: vscode.ExtensionContext) {
     }
   };
 
+  const configWatcher = vscode.workspace.createFileSystemWatcher("**/.vscode/claudesync.json");
+  configWatcher.onDidChange(async () => {
+    outputChannel.appendLine("Refreshing configuration...");
+    configManager.clearCache(); // clear the config cache
+    await configManager.getConfig(); // get fresh config
+    await updateSyncManager(); // update sync manager with new config
+  });
+  context.subscriptions.push(configWatcher);
+
   const updateSyncManager = async () => {
     const config = await configManager.getConfig();
     syncManager = new SyncManager(config, outputChannel, configManager);
@@ -81,13 +90,16 @@ export async function activate(context: vscode.ExtensionContext) {
     const vscodeConfig = vscode.workspace.getConfiguration("claudesync");
     const syncOnStartup = vscodeConfig.get("syncOnStartup") as boolean;
 
-    if (isInitialized && config.sessionToken && syncOnStartup) {
-      outputChannel.appendLine(`Sync on startup is enabled: ${syncOnStartup}`);
-      vscode.commands.executeCommand("claudesync.syncWorkspace");
-    } else {
-      outputChannel.appendLine(
-        `Skipping sync on startup. Initialized: ${isInitialized}, Has token: ${!!config.sessionToken}, Sync on startup: ${syncOnStartup}`
-      );
+    // only log startup sync status during actual startup, not config changes
+    if (!configWatcher) {
+      if (isInitialized && config.sessionToken && syncOnStartup) {
+        outputChannel.appendLine(`Sync on startup is enabled: ${syncOnStartup}`);
+        vscode.commands.executeCommand("claudesync.syncWorkspace");
+      } else {
+        outputChannel.appendLine(
+          `Skipping sync on startup. Initialized: ${isInitialized}, Has token: ${!!config.sessionToken}, Sync on startup: ${syncOnStartup}`
+        );
+      }
     }
 
     // setup file watcher based on current state
@@ -515,6 +527,40 @@ export async function activate(context: vscode.ExtensionContext) {
     vscode.env.openExternal(vscode.Uri.parse(`https://claude.ai/project/${config.projectId}`));
   });
 
+  // helper function to check if a uri is a directory and get its pattern
+  async function getExcludePattern(uri: vscode.Uri): Promise<{ isDirectory: boolean; pattern: string }> {
+    const relativePath = vscode.workspace.asRelativePath(uri);
+    const stat = await vscode.workspace.fs.stat(uri);
+    const isDirectory = (stat.type & vscode.FileType.Directory) === vscode.FileType.Directory;
+    return {
+      isDirectory,
+      pattern: isDirectory ? `${relativePath}/**` : relativePath,
+    };
+  }
+
+  // helper function to check if a pattern exists in any form, such as `scripts`, `scripts/`, or `scripts/**`
+  function findMatchingPattern(patterns: string[], targetPath: string, isDirectory: boolean): string | undefined {
+    // normalize path to use forward slashes
+    const normalizedPath = targetPath.replace(/\\/g, "/");
+    const variations = isDirectory ? [normalizedPath, `${normalizedPath}/`, `${normalizedPath}/**`] : [normalizedPath];
+
+    return patterns.find((pattern) => variations.includes(pattern.replace(/\\/g, "/")));
+  }
+
+  // helper function to sync after include/exclude operations
+  async function syncAfterPatternChange(uri: vscode.Uri, isDirectory: boolean, relativePath: string) {
+    const config = await configManager.getConfig();
+    const isInitialized = await syncManager.isProjectInitialized();
+
+    if (isInitialized && config.sessionToken) {
+      const workspaceFolder = vscode.workspace.workspaceFolders?.[0];
+      if (workspaceFolder) {
+        const files = await vscode.workspace.findFiles("**/*");
+        await syncFiles(files);
+      }
+    }
+  }
+
   // command to exclude file from sync
   const excludeFromSyncCommand = vscode.commands.registerCommand(
     "claudesync.excludeFromSync",
@@ -524,40 +570,38 @@ export async function activate(context: vscode.ExtensionContext) {
         return;
       }
 
-      const config = await configManager.getConfig();
       const relativePath = vscode.workspace.asRelativePath(uri);
-      const excludePatterns = config.excludePatterns || [];
-
-      // Check if pattern already exists
-      if (excludePatterns.includes(relativePath)) {
-        vscode.window.showInformationMessage(`${relativePath} is already excluded from sync`);
-        return;
-      }
-
       try {
-        // Add to exclude patterns
-        excludePatterns.push(relativePath);
-        await configManager.saveWorkspaceConfig({ excludePatterns });
-        vscode.window.showInformationMessage(`${relativePath} excluded from sync`);
+        const config = await configManager.getConfig();
+        const excludePatterns = config.excludePatterns || [];
+        const { isDirectory, pattern } = await getExcludePattern(uri);
 
-        // If auto-sync is enabled, trigger a sync to clean up the remote file
-        if (config.autoSync && config.cleanupRemoteFiles) {
-          await vscode.commands.executeCommand("claudesync.syncWorkspace");
+        // check if pattern already exists in any form
+        const existingPattern = findMatchingPattern(excludePatterns, relativePath, isDirectory);
+        if (existingPattern) {
+          vscode.window.showInformationMessage(
+            `${isDirectory ? "Directory" : "File"} '${relativePath}' is already excluded from Claude project`
+          );
+          return;
+        }
+
+        // add to exclude patterns
+        excludePatterns.push(pattern);
+        await configManager.saveWorkspaceConfig({ excludePatterns });
+        vscode.window.showInformationMessage(
+          `${isDirectory ? "Directory" : "File"} '${relativePath}' excluded from Claude project`
+        );
+
+        // if auto-sync is enabled or cleanup is enabled, trigger a sync
+        if (config.autoSync || config.cleanupRemoteFiles) {
+          await syncAfterPatternChange(uri, isDirectory, relativePath);
         }
       } catch (error) {
-        const errorMsg = `Failed to exclude file: ${error instanceof Error ? error.message : String(error)}`;
+        const errorMsg = `Failed to exclude ${relativePath}: ${error instanceof Error ? error.message : String(error)}`;
         vscode.window.showErrorMessage(errorMsg);
         outputChannel.appendLine(`Error: ${errorMsg}`);
-
-        // Try to rollback the exclude pattern change
-        try {
-          const index = excludePatterns.indexOf(relativePath);
-          if (index !== -1) {
-            excludePatterns.splice(index, 1);
-            await configManager.saveWorkspaceConfig({ excludePatterns });
-          }
-        } catch (rollbackError) {
-          outputChannel.appendLine(`Failed to rollback exclude pattern: ${rollbackError}`);
+        if (error instanceof Error && error.stack) {
+          outputChannel.appendLine(`Stack trace: ${error.stack}`);
         }
       }
     }
@@ -570,80 +614,49 @@ export async function activate(context: vscode.ExtensionContext) {
       return;
     }
 
-    const config = await configManager.getConfig();
     const relativePath = vscode.workspace.asRelativePath(uri);
-    const excludePatterns = config.excludePatterns || [];
-
-    // Check if pattern exists
-    const index = excludePatterns.indexOf(relativePath);
-    if (index === -1) {
-      vscode.window.showInformationMessage(`${relativePath} is not excluded from sync`);
-      return;
-    }
-
     try {
-      // Remove the pattern
+      const config = await configManager.getConfig();
+      const excludePatterns = config.excludePatterns || [];
+      const { isDirectory, pattern } = await getExcludePattern(uri);
+
+      // find matching pattern in any form
+      const existingPattern = findMatchingPattern(excludePatterns, relativePath, isDirectory);
+      if (!existingPattern) {
+        vscode.window.showInformationMessage(
+          `${isDirectory ? "Directory" : "File"} '${relativePath}' is not excluded from Claude project`
+        );
+        return;
+      }
+
+      // remove the pattern
+      const index = excludePatterns.indexOf(existingPattern);
       excludePatterns.splice(index, 1);
       await configManager.saveWorkspaceConfig({ excludePatterns });
 
-      // Check if we can sync the file
-      const isInitialized = await syncManager.isProjectInitialized();
-      if (isInitialized && config.sessionToken) {
-        await vscode.window.withProgress(
-          {
-            location: vscode.ProgressLocation.Notification,
-            title: "Including in Claude project",
-            cancellable: false,
-          },
-          async (progress) => {
-            progress.report({ message: "Syncing file..." });
+      // attempt to sync the file/directory
+      await syncAfterPatternChange(uri, isDirectory, relativePath);
 
-            let attempts = 0;
-            const maxAttempts = 10;
-            const delayMs = 1000; // 1 second
-            let lastError = "";
-
-            while (attempts < maxAttempts) {
-              const result = await syncManager.syncFiles([uri]);
-
-              if (result.success) {
-                if ((result.data?.syncedFiles ?? 0) > 0) {
-                  vscode.window.showInformationMessage(
-                    `${relativePath} included in sync and uploaded to Claude project`
-                  );
-                } else {
-                  vscode.window.showInformationMessage(`${relativePath} included in sync`);
-                }
-                return;
-              }
-
-              attempts++;
-              lastError = result.message || "Unknown error";
-
-              if (attempts < maxAttempts) {
-                progress.report({ message: `Syncing...` });
-                await new Promise((resolve) => setTimeout(resolve, delayMs));
-              }
-            }
-
-            // If we get here, all attempts failed
-            const errorMsg = lastError;
-            vscode.window.showWarningMessage(`${relativePath} included in sync but upload failed: ${errorMsg}`);
-            outputChannel.appendLine(`Failed to sync file: ${errorMsg}`);
-          }
+      if (!(await syncManager.isProjectInitialized()) || !config.sessionToken) {
+        vscode.window.showInformationMessage(
+          `${isDirectory ? "Directory" : "File"} '${relativePath}' included in Claude project`
         );
-      } else {
-        vscode.window.showInformationMessage(`${relativePath} included in sync`);
       }
     } catch (error) {
-      const errorMsg = `Failed to include file: ${error instanceof Error ? error.message : String(error)}`;
+      const errorMsg = `Failed to include ${relativePath}: ${error instanceof Error ? error.message : String(error)}`;
       vscode.window.showErrorMessage(errorMsg);
       outputChannel.appendLine(`Error: ${errorMsg}`);
+      if (error instanceof Error && error.stack) {
+        outputChannel.appendLine(`Stack trace: ${error.stack}`);
+      }
 
-      // Try to rollback the exclude pattern change
+      // try to rollback the exclude pattern change
       try {
-        if (!excludePatterns.includes(relativePath)) {
-          excludePatterns.push(relativePath);
+        const config = await configManager.getConfig();
+        const excludePatterns = config.excludePatterns || [];
+        const { pattern } = await getExcludePattern(uri);
+        if (!excludePatterns.includes(pattern)) {
+          excludePatterns.push(pattern);
           await configManager.saveWorkspaceConfig({ excludePatterns });
         }
       } catch (rollbackError) {

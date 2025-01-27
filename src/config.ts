@@ -13,6 +13,10 @@ export class ConfigManager {
     this.gitManager = new GitManager(outputChannel);
   }
 
+  public clearCache(): void {
+    this.cachedConfig = null;
+  }
+
   public async getConfig(): Promise<ClaudeSyncConfig> {
     if (this.cachedConfig) {
       return this.cachedConfig;
