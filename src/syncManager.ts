@@ -360,28 +360,78 @@ export class SyncManager {
   }
 
   private isBinaryContent(content: Uint8Array): boolean {
-    // check for null bytes which are common in binary files
-    let nullCount = 0;
-    let nonPrintableCount = 0;
-    const sampleSize = Math.min(content.length, 1024); // sample only the first 1KB
+    const signatures = {
+      pdf: [0x25, 0x50, 0x44, 0x46], // %PDF
+      png: [0x89, 0x50, 0x4e, 0x47], // PNG
+      gif: [0x47, 0x49, 0x46, 0x38], // GIF8
+      jpeg: [0xff, 0xd8, 0xff], // JPEG
+      zip: [0x50, 0x4b, 0x03, 0x04], // ZIP
+      gzip: [0x1f, 0x8b, 0x08], // GZIP
+    };
 
-    for (let i = 0; i < sampleSize; i++) {
-      if (content[i] === 0) {
-        nullCount++;
-      }
-      // check for non-printable characters (except common whitespace)
-      if ((content[i] < 32 && ![9, 10, 13].includes(content[i])) || content[i] === 127) {
-        nonPrintableCount++;
+    // check file signatures
+    for (const [_, sig] of Object.entries(signatures)) {
+      if (content.length >= sig.length && sig.every((byte, i) => content[i] === byte)) {
+        return true;
       }
     }
 
-    // if we find any null bytes, consider it binary
-    if (nullCount > 0) {
-      return true;
+    // take samples from beginning, middle, and end of file
+    const sampleSize = 512; // reduced from 1KB to sample multiple areas
+    const samples: Uint8Array[] = [];
+
+    samples.push(content.slice(0, sampleSize));
+
+    // middle sample (if file is large enough)
+    if (content.length > sampleSize * 2) {
+      const midStart = Math.floor(content.length / 2) - Math.floor(sampleSize / 2);
+      samples.push(content.slice(midStart, midStart + sampleSize));
     }
 
-    // if more than 30% of the content is non-printable, consider it binary
-    return nonPrintableCount / sampleSize > 0.3;
+    // end sample (if file is large enough)
+    if (content.length > sampleSize) {
+      samples.push(content.slice(-sampleSize));
+    }
+
+    for (const sample of samples) {
+      let nullCount = 0;
+      let nonPrintableCount = 0;
+      let consecutiveNonPrintable = 0;
+      let maxConsecutiveNonPrintable = 0;
+
+      for (const byte of sample) {
+        // check for null bytes
+        if (byte === 0) {
+          nullCount++;
+          if (nullCount > 1) {
+            return true;
+          }
+        }
+
+        if ((byte < 32 && ![9, 10, 13].includes(byte)) || byte === 127) {
+          nonPrintableCount++;
+          consecutiveNonPrintable++;
+          maxConsecutiveNonPrintable = Math.max(maxConsecutiveNonPrintable, consecutiveNonPrintable);
+        } else {
+          consecutiveNonPrintable = 0;
+        }
+
+        // UTF-8 continuation byte check (10xxxxxx)
+        if ((byte & 0xc0) === 0x80) {
+          nonPrintableCount--; // Don't count UTF-8 continuation bytes
+        }
+      }
+
+      if (
+        nonPrintableCount / sample.length > 0.08 ||
+        maxConsecutiveNonPrintable > 4 ||
+        (sample.length > 20 && nullCount / sample.length > 0.01)
+      ) {
+        return true;
+      }
+    }
+
+    return false;
   }
 
   private async prepareFiles(files: vscode.Uri[]): Promise<FileContent[]> {
