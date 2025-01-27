@@ -1,3 +1,4 @@
+import ignore from "ignore";
 import * as vscode from "vscode";
 import { ClaudeClient, Organization, Project } from "./claude/client";
 import { ConfigManager } from "./config";
@@ -392,10 +393,7 @@ export class SyncManager {
         const relativePath = vscode.workspace.asRelativePath(file);
 
         // skip excluded files
-        if (
-          this.config.excludePatterns.some((pattern) => GitignoreManager.isMatch(pattern, relativePath, true)) ||
-          this.gitignoreManager.shouldIgnore(relativePath)
-        ) {
+        if (this.shouldExclude(relativePath)) {
           continue;
         }
 
@@ -407,7 +405,23 @@ export class SyncManager {
         }
 
         if (this.isBinaryContent(content)) {
-          binaryFiles.add(relativePath);
+          // check if any parent folder is already excluded
+          const pathParts = relativePath.split("/");
+          let isParentExcluded = false;
+          let currentPath = "";
+
+          for (const part of pathParts) {
+            currentPath = currentPath ? `${currentPath}/${part}` : part;
+            if (this.shouldExclude(currentPath)) {
+              isParentExcluded = true;
+              break;
+            }
+          }
+
+          if (!isParentExcluded) {
+            // if no parent folder is excluded, add the file to binary files
+            binaryFiles.add(relativePath);
+          }
           continue;
         }
 
@@ -433,16 +447,19 @@ export class SyncManager {
     return result;
   }
 
-  public shouldExcludeFile(filePath: string): boolean {
-    const isExcludedByConfig = this.config.excludePatterns.some((pattern) => {
-      return GitignoreManager.isMatch(pattern, filePath, true);
-    });
-
-    if (isExcludedByConfig) {
+  private shouldExclude(relativePath: string): boolean {
+    // first check against .gitignore patterns
+    if (this.gitignoreManager.shouldIgnore(relativePath)) {
       return true;
     }
 
-    // check gitignore patterns
-    return this.gitignoreManager.shouldIgnore(filePath);
+    // then check against exclude patterns from config
+    if (this.config.excludePatterns.length === 0) {
+      return false;
+    }
+
+    // create a single ignore instance for all exclude patterns
+    const ig = ignore().add(this.config.excludePatterns);
+    return ig.ignores(relativePath);
   }
 }
