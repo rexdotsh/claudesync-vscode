@@ -108,11 +108,16 @@ export class ClaudeClient {
     const response = await this.makeRequest<OrganizationResponse[]>("GET", "/organizations");
 
     return response
-      .filter(
-        (org) =>
-          new Set(org.capabilities || []).has("chat") &&
-          (new Set(org.capabilities || []).has("claude_pro") || new Set(org.capabilities || []).has("raven"))
-      )
+      .filter((org) => {
+        const caps = new Set(org.capabilities || []);
+        // check for atleast chat, and one of the following: claude_pro, claude_max, raven
+        return caps.has("chat") &&
+               (caps.has("claude_pro") || 
+                // ref: https://github.com/rexdotsh/claudesync-vscode/issues/4
+                caps.has("claude_max") || 
+                // ref: https://github.com/jahwag/ClaudeSync/blob/9f151a78bdfdddc892a3148d0e906078dd63b17f/src/claudesync/providers/base_claude_ai.py#L180
+                caps.has("raven"));
+      })
       .map((org) => ({
         id: org.uuid,
         name: org.name,
