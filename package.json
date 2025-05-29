@@ -222,7 +222,7 @@
   },
   "scripts": {
     "dev": "node esbuild.js --watch",
-    "build": "node esbuild.js --production",
+    "build": "tsc --noEmit && node esbuild.js --production",
     "format": "biome format --write",
     "lint": "biome lint --write --unsafe",
     "format:check": "biome format",

@@ -127,6 +127,26 @@ Need to give Claude specific instructions for your project? Create a `.projectin
 
 Feel free to contribute to this project by opening an issue or submitting a pull request.
 
+## Development
+
+### Setup
+
+1. Clone the repository and install dependencies:
+   ```bash
+   git clone https://github.com/rexdotsh/claudesync-vscode.git
+   cd claudesync-vscode
+   yarn install
+   ```
+
+2. Start the build watcher:
+   ```bash
+   yarn dev  # Start watch mode
+   ```
+
+3. Press `F5` in VS Code to launch the Extension Development Host
+
+4. Make changes to `src/` files and reload the extension host (`Ctrl+R`) to test
+
 ## License
 
 ClaudeSync is open source software licensed under the MIT License. See the [LICENSE](LICENSE) file for details.
