@@ -1,0 +1,50 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "type": "shell",
+      "label": "build",
+      "command": "yarn",
+      "args": ["build"],
+      "group": {
+        "kind": "build",
+        "isDefault": true
+      },
+      "presentation": {
+        "reveal": "silent"
+      },
+      "problemMatcher": []
+    },
+    {
+      "type": "shell",
+      "label": "watch",
+      "command": "yarn",
+      "args": ["dev"],
+      "isBackground": true,
+      "group": "build",
+      "presentation": {
+        "reveal": "never"
+      },
+      "problemMatcher": {
+        "owner": "esbuild",
+        "pattern": [
+          {
+            "regexp": "^✘ \\[ERROR\\] (.*)$",
+            "message": 1
+          },
+          {
+            "regexp": "^    (.*):(\\d+):(\\d+):$",
+            "file": 1,
+            "line": 2,
+            "column": 3
+          }
+        ],
+        "background": {
+          "activeOnStart": true,
+          "beginsPattern": "^\\[watch\\] build started$",
+          "endsPattern": "^\\[watch\\] build finished$"
+        }
+      }
+    }
+  ]
+}
