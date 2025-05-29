@@ -193,6 +193,7 @@
             "yarn.lock",
             "pnpm-lock.yaml",
             "poetry.lock",
+            "bun.lock",
             "bun.lockb",
             "cargo.lock",
             ".projectinstructions",
