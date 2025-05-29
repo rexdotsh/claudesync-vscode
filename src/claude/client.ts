@@ -12,7 +12,7 @@ export interface Project {
   archived_at?: string;
 }
 
-export interface FileDoc {
+interface FileDoc {
   uuid: string;
   file_name: string;
   content: string;

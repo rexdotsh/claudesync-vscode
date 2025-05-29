@@ -223,12 +223,13 @@
   "scripts": {
     "dev": "webpack --mode development --watch",
     "build": "webpack --mode production --devtool hidden-source-map",
-    "format": "biome format",
-    "format:fix": "biome format --write",
-    "lint": "biome lint",
-    "lint:fix": "biome lint --write --unsafe",
-    "prepublish": "yarn run format && yarn run lint && yarn run build",
-    "vscode:prepublish": "yarn run prepublish"
+    "format": "biome format --write",
+    "lint": "biome lint --write --unsafe",
+    "format:check": "biome format",
+    "lint:check": "biome lint",
+    "prepublish": "yarn run format:check && yarn run lint:check && yarn run build",
+    "vscode:prepublish": "yarn run prepublish",
+    "publish": "vsce publish"
   },
   "dependencies": {
     "axios": "^1.6.2",
@@ -239,7 +240,6 @@
     "@types/node": "20.x",
     "@types/vscode": "^1.90.0",
     "@vscode/vsce": "^3.2.1",
-    "@webpack-cli/generators": "^3.0.7",
     "ts-loader": "^9.5.1",
     "typescript": "^5.7.2",
     "webpack": "^5.97.1",
