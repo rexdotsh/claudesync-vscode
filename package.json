@@ -221,8 +221,8 @@
     }
   },
   "scripts": {
-    "dev": "webpack --mode development --watch",
-    "build": "webpack --mode production --devtool hidden-source-map",
+    "dev": "node esbuild.js --watch",
+    "build": "node esbuild.js --production",
     "format": "biome format --write",
     "lint": "biome lint --write --unsafe",
     "format:check": "biome format",
@@ -240,10 +240,8 @@
     "@types/node": "20.x",
     "@types/vscode": "^1.90.0",
     "@vscode/vsce": "^3.2.1",
-    "ts-loader": "^9.5.1",
-    "typescript": "^5.7.2",
-    "webpack": "^5.97.1",
-    "webpack-cli": "^6.0.1"
+    "esbuild": "^0.25.5",
+    "typescript": "^5.7.2"
   },
   "packageManager": "yarn@4.9.1"
 }
