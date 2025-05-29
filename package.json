@@ -14,18 +14,12 @@
   "engines": {
     "vscode": "^1.90.0"
   },
-  "categories": [
-    "Programming Languages",
-    "AI",
-    "Other"
-  ],
+  "categories": ["Programming Languages", "AI", "Other"],
   "galleryBanner": {
     "color": "#fdf6f3",
     "theme": "light"
   },
-  "activationEvents": [
-    "onStartupFinished"
-  ],
+  "activationEvents": ["onStartupFinished"],
   "main": "./dist/extension.js",
   "contributes": {
     "commands": [
@@ -221,18 +215,14 @@
     }
   },
   "scripts": {
-    "vscode:prepublish": "yarn run package",
-    "compile": "webpack --mode development",
-    "watch": "webpack --mode development --watch",
-    "watch:esbuild": "node esbuild.js --watch",
-    "watch:tsc": "tsc --noEmit --watch --project tsconfig.json",
-    "package": "webpack --mode production --devtool hidden-source-map",
-    "compile-tests": "tsc -p . --outDir out",
-    "watch-tests": "tsc -p . -w --outDir out",
-    "pretest": "yarn run compile-tests && yarn run compile && yarn run lint",
-    "check-types": "tsc --noEmit",
-    "lint": "eslint src",
-    "test": "vscode-test"
+    "dev": "webpack --mode development --watch",
+    "build": "webpack --mode production --devtool hidden-source-map",
+    "format": "biome format",
+    "format:fix": "biome format --write",
+    "lint": "biome lint",
+    "lint:fix": "biome lint --write --unsafe",
+    "prepublish": "yarn run format && yarn run lint && yarn run build",
+    "vscode:prepublish": "yarn run package"
   },
   "dependencies": {
     "axios": "^1.6.2",
