@@ -222,9 +222,10 @@
   },
   "scripts": {
     "dev": "node esbuild.js --watch",
-    "build": "tsc --noEmit && node esbuild.js --production",
+    "build": "yarn run check-types && node esbuild.js --production",
     "format": "biome format --write",
     "lint": "biome lint --write --unsafe",
+    "check-types": "tsc --noEmit",
     "format:check": "biome format",
     "lint:check": "biome lint",
     "prepublish": "yarn run format:check && yarn run lint:check && yarn run build",
