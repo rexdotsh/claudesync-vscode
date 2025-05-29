@@ -1,8 +1,8 @@
-import * as vscode from "vscode";
+import * as vscode from 'vscode';
 
 export class GitManager {
-  private static readonly GITIGNORE_FILE = ".gitignore";
-  private static readonly CLAUDESYNC_IGNORE = ".vscode/claudesync.json";
+  private static readonly GITIGNORE_FILE = '.gitignore';
+  private static readonly CLAUDESYNC_IGNORE = '.vscode/claudesync.json';
   private outputChannel: vscode.OutputChannel;
 
   constructor(outputChannel: vscode.OutputChannel) {
@@ -20,41 +20,51 @@ export class GitManager {
     }
 
     // Check if addToGitignore is enabled
-    const config = vscode.workspace.getConfiguration("claudesync");
-    const addToGitignore = config.get<boolean>("addToGitignore") || false;
+    const config = vscode.workspace.getConfiguration('claudesync');
+    const addToGitignore = config.get<boolean>('addToGitignore') || false;
     if (!addToGitignore) {
       return;
     }
 
     // Check if .git directory exists
-    const gitDir = vscode.Uri.joinPath(workspaceFolder.uri, ".git");
+    const gitDir = vscode.Uri.joinPath(workspaceFolder.uri, '.git');
     try {
       await vscode.workspace.fs.stat(gitDir);
     } catch {
       // Not a git repository, skip
-      this.outputChannel.appendLine("Not a git repository, skipping .gitignore update.");
+      this.outputChannel.appendLine(
+        'Not a git repository, skipping .gitignore update.',
+      );
       return;
     }
 
-    const gitignorePath = vscode.Uri.joinPath(workspaceFolder.uri, GitManager.GITIGNORE_FILE);
-    let currentContent = "";
+    const gitignorePath = vscode.Uri.joinPath(
+      workspaceFolder.uri,
+      GitManager.GITIGNORE_FILE,
+    );
+    let currentContent = '';
 
     try {
       const fileContent = await vscode.workspace.fs.readFile(gitignorePath);
-      currentContent = Buffer.from(fileContent).toString("utf8");
+      currentContent = Buffer.from(fileContent).toString('utf8');
 
       if (this.hasClaudeSyncIgnore(currentContent)) {
-        this.outputChannel.appendLine("Configuration file already in .gitignore.");
+        this.outputChannel.appendLine(
+          'Configuration file already in .gitignore.',
+        );
         return;
       }
     } catch {
       // .gitignore doesn't exist, we'll create it
-      this.outputChannel.appendLine("Creating new .gitignore file.");
+      this.outputChannel.appendLine('Creating new .gitignore file.');
     }
 
     const newContent = this.addClaudeSyncIgnore(currentContent);
-    await vscode.workspace.fs.writeFile(gitignorePath, Buffer.from(newContent, "utf8"));
-    this.outputChannel.appendLine("Added configuration file to .gitignore.");
+    await vscode.workspace.fs.writeFile(
+      gitignorePath,
+      Buffer.from(newContent, 'utf8'),
+    );
+    this.outputChannel.appendLine('Added configuration file to .gitignore.');
   }
 
   private hasClaudeSyncIgnore(content: string): boolean {
@@ -64,7 +74,7 @@ export class GitManager {
 
   private addClaudeSyncIgnore(content: string): string {
     // ensure content ends with newline
-    const normalizedContent = content.endsWith("\n") ? content : content + "\n";
-    return normalizedContent + GitManager.CLAUDESYNC_IGNORE + "\n";
+    const normalizedContent = content.endsWith('\n') ? content : `${content}\n`;
+    return `${normalizedContent + GitManager.CLAUDESYNC_IGNORE}\n`;
   }
 }

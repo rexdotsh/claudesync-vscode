@@ -38,10 +38,7 @@
           "level": "warn",
           "options": {
             "ignoreNonDom": false,
-            "allowInvalidRoles": [
-              "none",
-              "text"
-            ]
+            "allowInvalidRoles": ["none", "text"]
           }
         },
         "useSemanticElements": "off", // Rule is buggy, revisit later
@@ -131,9 +128,7 @@
     // Playwright requires an object destructure, even if empty
     // https://github.com/microsoft/playwright/issues/30007
     {
-      "include": [
-        "playwright/**"
-      ],
+      "include": ["playwright/**"],
       "linter": {
         "rules": {
           "correctness": {

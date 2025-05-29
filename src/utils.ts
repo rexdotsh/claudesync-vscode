@@ -9,11 +9,11 @@ function str2ab(str: string): ArrayBuffer {
 
 function ab2hex(buffer: ArrayBuffer): string {
   const hashArray = Array.from(new Uint8Array(buffer));
-  return hashArray.map((b) => b.toString(16).padStart(2, "0")).join("");
+  return hashArray.map((b) => b.toString(16).padStart(2, '0')).join('');
 }
 
 export async function computeSHA256Hash(content: string): Promise<string> {
   const msgBuffer = str2ab(content);
-  const hashBuffer = await crypto.subtle.digest("SHA-256", msgBuffer);
+  const hashBuffer = await crypto.subtle.digest('SHA-256', msgBuffer);
   return ab2hex(hashBuffer);
 }
