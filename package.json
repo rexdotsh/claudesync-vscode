@@ -221,40 +221,28 @@
     }
   },
   "scripts": {
-    "vscode:prepublish": "yarn run package",
-    "compile": "webpack --mode development",
-    "watch": "webpack --mode development --watch",
-    "watch:esbuild": "node esbuild.js --watch",
-    "watch:tsc": "tsc --noEmit --watch --project tsconfig.json",
-    "package": "webpack --mode production --devtool hidden-source-map",
-    "compile-tests": "tsc -p . --outDir out",
-    "watch-tests": "tsc -p . -w --outDir out",
-    "pretest": "yarn run compile-tests && yarn run compile && yarn run lint",
+    "dev": "node esbuild.js --watch",
+    "build": "yarn run check-types && node esbuild.js --production",
+    "format": "biome format --write",
+    "lint": "biome lint --write --unsafe",
     "check-types": "tsc --noEmit",
-    "lint": "eslint src",
-    "test": "vscode-test"
+    "format:check": "biome format",
+    "lint:check": "biome lint",
+    "prepublish": "yarn run format:check && yarn run lint:check && yarn run build",
+    "vscode:prepublish": "yarn run prepublish",
+    "publish": "vsce publish"
   },
   "dependencies": {
     "axios": "^1.6.2",
     "ignore": "^7.0.3"
   },
   "devDependencies": {
-    "@types/mocha": "^10.0.10",
+    "@biomejs/biome": "^1.9.4",
     "@types/node": "20.x",
     "@types/vscode": "^1.90.0",
-    "@typescript-eslint/eslint-plugin": "^8.17.0",
-    "@typescript-eslint/parser": "^8.17.0",
-    "@vscode/test-cli": "^0.0.10",
-    "@vscode/test-electron": "^2.4.1",
     "@vscode/vsce": "^3.2.1",
-    "@webpack-cli/generators": "^3.0.7",
-    "esbuild": "^0.24.0",
-    "eslint": "^9.16.0",
-    "npm-run-all": "^4.1.5",
-    "ts-loader": "^9.5.1",
-    "typescript": "^5.7.2",
-    "typescript-eslint": "^8.18.2",
-    "webpack": "^5.97.1",
-    "webpack-cli": "^6.0.1"
-  }
+    "esbuild": "^0.25.5",
+    "typescript": "^5.7.2"
+  },
+  "packageManager": "yarn@4.9.1"
 }

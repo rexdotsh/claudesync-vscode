@@ -1,10 +1,10 @@
-import ignore from "ignore";
-import * as vscode from "vscode";
-import { ClaudeClient, Organization, Project } from "./claude/client";
-import { ConfigManager } from "./config";
-import { GitignoreManager } from "./gitignoreManager";
-import { ClaudeSyncConfig, FileContent, SyncResult } from "./types";
-import { computeSHA256Hash } from "./utils";
+import ignore from 'ignore';
+import * as vscode from 'vscode';
+import { ClaudeClient, type Organization, type Project } from './claude/client';
+import type { ConfigManager } from './config';
+import { GitignoreManager } from './gitignoreManager';
+import type { ClaudeSyncConfig, FileContent, SyncResult } from './types';
+import { computeSHA256Hash } from './utils';
 
 export class SyncManager {
   private config: ClaudeSyncConfig;
@@ -18,7 +18,11 @@ export class SyncManager {
   private readonly MAX_RETRIES = 10;
   private readonly RETRY_DELAY = 1000; // 1s
 
-  constructor(config: ClaudeSyncConfig, outputChannel: vscode.OutputChannel, configManager: ConfigManager) {
+  constructor(
+    config: ClaudeSyncConfig,
+    outputChannel: vscode.OutputChannel,
+    configManager: ConfigManager,
+  ) {
     this.config = config;
     this.outputChannel = outputChannel;
     this.claudeClient = new ClaudeClient(config);
@@ -33,8 +37,8 @@ export class SyncManager {
     }
 
     try {
-      const vscodeDir = vscode.Uri.joinPath(workspaceFolder.uri, ".vscode");
-      const configPath = vscode.Uri.joinPath(vscodeDir, "claudesync.json");
+      const vscodeDir = vscode.Uri.joinPath(workspaceFolder.uri, '.vscode');
+      const configPath = vscode.Uri.joinPath(vscodeDir, 'claudesync.json');
       await vscode.workspace.fs.stat(configPath);
       return true;
     } catch {
@@ -42,15 +46,24 @@ export class SyncManager {
     }
   }
 
-  private async handleError<T>(operation: string, action: () => Promise<T>): Promise<SyncResult> {
+  private async handleError<T>(
+    operation: string,
+    action: () => Promise<T>,
+  ): Promise<SyncResult> {
     try {
       const result = await action();
-      if (typeof result === "object" && result !== null && "success" in result) {
+      if (
+        typeof result === 'object' &&
+        result !== null &&
+        'success' in result
+      ) {
         return result as SyncResult;
       }
       return { success: true, data: { syncedFiles: 0 } };
     } catch (error) {
-      this.outputChannel.appendLine(`Error in ${operation}: ${error instanceof Error ? error.message : String(error)}`);
+      this.outputChannel.appendLine(
+        `Error in ${operation}: ${error instanceof Error ? error.message : String(error)}`,
+      );
       if (error instanceof Error && error.stack) {
         this.outputChannel.appendLine(`Stack trace: ${error.stack}`);
       }
@@ -64,10 +77,15 @@ export class SyncManager {
 
   private async ensureProjectAndOrg(): Promise<SyncResult> {
     if (this.currentOrg && this.currentProject) {
-      return { success: true, message: "Organization and project already loaded" };
+      return {
+        success: true,
+        message: 'Organization and project already loaded',
+      };
     }
 
-    this.outputChannel.appendLine("Loading organization and project from config...");
+    this.outputChannel.appendLine(
+      'Loading organization and project from config...',
+    );
     const config = await this.configManager.getConfig();
     const orgId = config.organizationId;
     const projectId = config.projectId;
@@ -75,7 +93,8 @@ export class SyncManager {
     if (!orgId || !projectId) {
       return {
         success: false,
-        message: "Project not initialized. Please run 'Initialize Project' first",
+        message:
+          "Project not initialized. Please run 'Initialize Project' first",
       };
     }
 
@@ -85,7 +104,7 @@ export class SyncManager {
     if (!this.currentOrg) {
       return {
         success: false,
-        message: "Organization not found. Please reinitialize the project",
+        message: 'Organization not found. Please reinitialize the project',
       };
     }
 
@@ -95,91 +114,124 @@ export class SyncManager {
     if (!this.currentProject) {
       return {
         success: false,
-        message: "Project not found. Please reinitialize the project",
+        message: 'Project not found. Please reinitialize the project',
       };
     }
 
     this.outputChannel.appendLine(
-      `Loaded organization: ${this.currentOrg.name} and project: ${this.currentProject.name}`
+      `Loaded organization: ${this.currentOrg.name} and project: ${this.currentProject.name}`,
     );
-    return { success: true, message: "Successfully loaded organization and project" };
+    return {
+      success: true,
+      message: 'Successfully loaded organization and project',
+    };
   }
 
   private async updateProjectInstructions(): Promise<SyncResult> {
     const workspaceFolder = vscode.workspace.workspaceFolders?.[0];
     if (!workspaceFolder) {
-      return { success: false, message: "No workspace folder found" };
+      return { success: false, message: 'No workspace folder found' };
+    }
+
+    if (!this.currentOrg || !this.currentProject) {
+      return {
+        success: false,
+        message: 'Project not initialized. Please run Initialize Project first',
+      };
     }
 
     try {
-      const instructionsUri = vscode.Uri.joinPath(workspaceFolder.uri, ".projectinstructions");
-      const instructionsContent = await vscode.workspace.fs.readFile(instructionsUri);
+      const instructionsUri = vscode.Uri.joinPath(
+        workspaceFolder.uri,
+        '.projectinstructions',
+      );
+      const instructionsContent =
+        await vscode.workspace.fs.readFile(instructionsUri);
       const instructions = new TextDecoder().decode(instructionsContent);
 
-      await this.claudeClient.updateProjectPromptTemplate(this.currentOrg!.id, this.currentProject!.id, instructions);
-      this.outputChannel.appendLine("Updated project prompt template from .projectinstructions file");
-      return { success: true, message: "Successfully updated project instructions" };
+      await this.claudeClient.updateProjectPromptTemplate(
+        this.currentOrg.id,
+        this.currentProject.id,
+        instructions,
+      );
+      this.outputChannel.appendLine(
+        'Updated project prompt template from .projectinstructions file',
+      );
+      return {
+        success: true,
+        message: 'Successfully updated project instructions',
+      };
     } catch (error) {
-      this.outputChannel.appendLine("No .projectinstructions file found or failed to read it");
-      return { success: true, message: "No project instructions to update" };
+      this.outputChannel.appendLine(
+        'No .projectinstructions file found or failed to read it',
+      );
+      return { success: true, message: 'No project instructions to update' };
     }
   }
 
   public async initializeProject(): Promise<SyncResult> {
-    return this.handleError("initialize project", async () => {
+    return this.handleError('initialize project', async () => {
       let retryCount = 0;
 
       return vscode.window.withProgress(
         {
           location: vscode.ProgressLocation.Notification,
-          title: "Initializing Project",
+          title: 'Initializing Project',
           cancellable: false,
         },
         async (progress) => {
           while (retryCount < this.MAX_RETRIES) {
             try {
-              progress.report({ message: "Processing..." });
+              progress.report({ message: 'Processing...' });
               const orgs = await this.claudeClient.getOrganizations();
               if (!orgs.length) {
                 return {
                   success: false,
-                  message: "No organizations found. Please make sure you have access to Claude",
+                  message:
+                    'No organizations found. Please make sure you have access to Claude',
                 };
               }
 
-              progress.report({ message: "Selecting organization..." });
-              this.currentOrg = orgs.length === 1 ? orgs[0] : await this.selectOrganization(orgs);
+              progress.report({ message: 'Selecting organization...' });
+              this.currentOrg =
+                orgs.length === 1
+                  ? orgs[0]
+                  : await this.selectOrganization(orgs);
               if (!this.currentOrg) {
-                return { success: false, message: "No organization selected" };
+                return { success: false, message: 'No organization selected' };
               }
 
               const workspaceFolder = vscode.workspace.workspaceFolders?.[0];
               if (!workspaceFolder) {
-                return { success: false, message: "No workspace folder found" };
+                return { success: false, message: 'No workspace folder found' };
               }
 
               const projectName = workspaceFolder.name;
-              progress.report({ message: "Getting projects..." });
-              const projects = await this.claudeClient.getProjects(this.currentOrg.id);
-              this.currentProject = projects.find((p) => p.name === projectName);
+              progress.report({ message: 'Getting projects...' });
+              const projects = await this.claudeClient.getProjects(
+                this.currentOrg.id,
+              );
+              this.currentProject = projects.find(
+                (p) => p.name === projectName,
+              );
 
               let successMessage: string;
               if (!this.currentProject) {
-                progress.report({ message: "Creating new project..." });
+                progress.report({ message: 'Creating new project...' });
                 this.currentProject = await this.claudeClient.createProject(
                   this.currentOrg.id,
                   projectName,
-                  "Created by ClaudeSync from VSCode"
+                  'Created by ClaudeSync from VSCode',
                 );
                 successMessage = `Project '${projectName}' has been successfully created with Claude!`;
               } else {
                 successMessage = `Project '${projectName}' already exists.`;
               }
 
-              progress.report({ message: "Updating project instructions..." });
+              progress.report({ message: 'Updating project instructions...' });
               await this.updateProjectInstructions();
 
-              progress.report({ message: "Saving configuration..." });
+              progress.report({ message: 'Saving configuration...' });
               await this.configManager.saveWorkspaceConfig({
                 organizationId: this.currentOrg.id,
                 projectId: this.currentProject.id,
@@ -199,26 +251,36 @@ export class SyncManager {
                 message: `Attempt ${retryCount} failed. Retrying in ${this.RETRY_DELAY / 1000}s...`,
               });
 
-              await new Promise((resolve) => setTimeout(resolve, this.RETRY_DELAY));
-              progress.report({ message: "Initializing..." });
+              await new Promise((resolve) =>
+                setTimeout(resolve, this.RETRY_DELAY),
+              );
+              progress.report({ message: 'Initializing...' });
             }
           }
 
           return {
             success: false,
-            message: "Failed to initialize project after maximum retries",
+            message: 'Failed to initialize project after maximum retries',
           };
-        }
+        },
       );
     });
   }
 
   public async syncFiles(files: vscode.Uri[]): Promise<SyncResult> {
-    return this.handleError("sync files", async () => {
+    return this.handleError('sync files', async () => {
       const projectResult = await this.ensureProjectAndOrg();
       if (!projectResult.success) {
         return projectResult;
       }
+
+      const org = this.currentOrg;
+      const proj = this.currentProject;
+      if (!org || !proj) {
+        return projectResult;
+      }
+      const orgId = org.id;
+      const projectId = proj.id;
 
       // load gitignore patterns if workspace folder exists
       const workspaceFolder = vscode.workspace.workspaceFolders?.[0];
@@ -226,14 +288,16 @@ export class SyncManager {
         await this.gitignoreManager.loadGitignore(workspaceFolder.uri);
       }
 
-      this.outputChannel.appendLine("Preparing files for sync...");
+      this.outputChannel.appendLine('Preparing files for sync...');
       const fileContents = await this.prepareFiles(files);
       if (!fileContents.length) {
-        return { success: false, message: "No valid files to sync" };
+        return { success: false, message: 'No valid files to sync' };
       }
-      this.outputChannel.appendLine(`Prepared ${fileContents.length} files for sync`);
+      this.outputChannel.appendLine(
+        `Prepared ${fileContents.length} files for sync`,
+      );
 
-      const existingFiles = await this.claudeClient.listFiles(this.currentOrg!.id, this.currentProject!.id);
+      const existingFiles = await this.claudeClient.listFiles(orgId, projectId);
       let skipped = 0;
       let synced = 0;
       let deleted = 0;
@@ -241,7 +305,7 @@ export class SyncManager {
       await vscode.window.withProgress(
         {
           location: vscode.ProgressLocation.Notification,
-          title: "Uploading to Claude",
+          title: 'Uploading to Claude',
           cancellable: true,
         },
         async (progress, token) => {
@@ -251,7 +315,7 @@ export class SyncManager {
           // First, sync all local files
           for (const file of fileContents) {
             if (token.isCancellationRequested) {
-              this.outputChannel.appendLine("Upload cancelled by user");
+              this.outputChannel.appendLine('Upload cancelled by user');
               return;
             }
 
@@ -261,7 +325,9 @@ export class SyncManager {
             });
 
             this.outputChannel.appendLine(`Processing file: ${file.path}`);
-            const existingFile = existingFiles.find((f) => f.file_name === file.path);
+            const existingFile = existingFiles.find(
+              (f) => f.file_name === file.path,
+            );
 
             if (existingFile) {
               const [remoteHash, localHash] = await Promise.all([
@@ -274,40 +340,60 @@ export class SyncManager {
                 continue;
               }
 
-              await this.claudeClient.deleteFile(this.currentOrg!.id, this.currentProject!.id, existingFile.uuid);
+              await this.claudeClient.deleteFile(
+                orgId,
+                projectId,
+                existingFile.uuid,
+              );
             }
 
-            await this.claudeClient.uploadFile(this.currentOrg!.id, this.currentProject!.id, file.path, file.content);
+            await this.claudeClient.uploadFile(
+              orgId,
+              projectId,
+              file.path,
+              file.content,
+            );
             synced++;
           }
 
           // Then, if cleanupRemoteFiles is enabled, remove any remote files that don't exist locally
-          if (this.config.cleanupRemoteFiles && !token.isCancellationRequested) {
-            progress.report({ message: "Cleaning up remote files..." });
+          if (
+            this.config.cleanupRemoteFiles &&
+            !token.isCancellationRequested
+          ) {
+            progress.report({ message: 'Cleaning up remote files...' });
 
             const localFilePaths = new Set(fileContents.map((f) => f.path));
-            const filesToDelete = existingFiles.filter((f) => !localFilePaths.has(f.file_name));
+            const filesToDelete = existingFiles.filter(
+              (f) => !localFilePaths.has(f.file_name),
+            );
 
             if (filesToDelete.length > 0) {
               this.outputChannel.appendLine(
                 `Found ${filesToDelete.length} remote files to delete: ${filesToDelete
                   .map((f) => f.file_name)
-                  .join(", ")}`
+                  .join(', ')}`,
               );
 
               for (const file of filesToDelete) {
                 try {
-                  await this.claudeClient.deleteFile(this.currentOrg!.id, this.currentProject!.id, file.uuid);
+                  await this.claudeClient.deleteFile(
+                    orgId,
+                    projectId,
+                    file.uuid,
+                  );
                   deleted++;
                 } catch (error) {
                   this.outputChannel.appendLine(
-                    `Failed to delete ${file.file_name}: ${error instanceof Error ? error.message : String(error)}`
+                    `Failed to delete ${file.file_name}: ${error instanceof Error ? error.message : String(error)}`,
                   );
                 }
               }
 
               if (deleted > 0) {
-                this.outputChannel.appendLine(`Successfully deleted ${deleted} remote files`);
+                this.outputChannel.appendLine(
+                  `Successfully deleted ${deleted} remote files`,
+                );
               }
             }
           }
@@ -315,14 +401,16 @@ export class SyncManager {
           if (skipped > 0) {
             this.outputChannel.appendLine(`Skipped ${skipped} unchanged files`);
           }
-        }
+        },
       );
 
       return {
         success: true,
-        message: `Successfully synced ${fileContents.length} file${fileContents.length === 1 ? "" : "s"} with Claude${
-          skipped > 0 ? ` (${skipped} unchanged file${skipped === 1 ? "" : "s"} skipped)` : ""
-        }${deleted > 0 ? ` and removed ${deleted} remote file${deleted === 1 ? "" : "s"}` : ""}`,
+        message: `Successfully synced ${fileContents.length} file${fileContents.length === 1 ? '' : 's'} with Claude${
+          skipped > 0
+            ? ` (${skipped} unchanged file${skipped === 1 ? '' : 's'} skipped)`
+            : ''
+        }${deleted > 0 ? ` and removed ${deleted} remote file${deleted === 1 ? '' : 's'}` : ''}`,
         data: {
           syncedFiles: synced,
           skippedFiles: skipped,
@@ -334,7 +422,7 @@ export class SyncManager {
   }
 
   public async syncProjectInstructions(): Promise<SyncResult> {
-    return this.handleError("sync project instructions", async () => {
+    return this.handleError('sync project instructions', async () => {
       const projectResult = await this.ensureProjectAndOrg();
       if (!projectResult.success) {
         return projectResult;
@@ -342,19 +430,28 @@ export class SyncManager {
 
       const result = await this.updateProjectInstructions();
       return result.success
-        ? { success: true, message: "Project instructions have been successfully updated in Claude" }
-        : { success: false, message: "No .projectinstructions file found or failed to read it" };
+        ? {
+            success: true,
+            message:
+              'Project instructions have been successfully updated in Claude',
+          }
+        : {
+            success: false,
+            message: 'No .projectinstructions file found or failed to read it',
+          };
     });
   }
 
-  private async selectOrganization(orgs: Organization[]): Promise<Organization | undefined> {
+  private async selectOrganization(
+    orgs: Organization[],
+  ): Promise<Organization | undefined> {
     const selected = await vscode.window.showQuickPick(
       orgs.map((org) => ({
         label: org.name,
         description: org.id,
         org,
       })),
-      { placeHolder: "Select an organization" }
+      { placeHolder: 'Select an organization' },
     );
     return selected?.org;
   }
@@ -371,7 +468,10 @@ export class SyncManager {
 
     // check file signatures
     for (const [_, sig] of Object.entries(signatures)) {
-      if (content.length >= sig.length && sig.every((byte, i) => content[i] === byte)) {
+      if (
+        content.length >= sig.length &&
+        sig.every((byte, i) => content[i] === byte)
+      ) {
         return true;
       }
     }
@@ -384,7 +484,8 @@ export class SyncManager {
 
     // middle sample (if file is large enough)
     if (content.length > sampleSize * 2) {
-      const midStart = Math.floor(content.length / 2) - Math.floor(sampleSize / 2);
+      const midStart =
+        Math.floor(content.length / 2) - Math.floor(sampleSize / 2);
       samples.push(content.slice(midStart, midStart + sampleSize));
     }
 
@@ -411,7 +512,10 @@ export class SyncManager {
         if ((byte < 32 && ![9, 10, 13].includes(byte)) || byte === 127) {
           nonPrintableCount++;
           consecutiveNonPrintable++;
-          maxConsecutiveNonPrintable = Math.max(maxConsecutiveNonPrintable, consecutiveNonPrintable);
+          maxConsecutiveNonPrintable = Math.max(
+            maxConsecutiveNonPrintable,
+            consecutiveNonPrintable,
+          );
         } else {
           consecutiveNonPrintable = 0;
         }
@@ -456,9 +560,9 @@ export class SyncManager {
 
         if (this.isBinaryContent(content)) {
           // check if any parent folder is already excluded
-          const pathParts = relativePath.split("/");
+          const pathParts = relativePath.split('/');
           let isParentExcluded = false;
-          let currentPath = "";
+          let currentPath = '';
 
           for (const part of pathParts) {
             currentPath = currentPath ? `${currentPath}/${part}` : part;
@@ -486,11 +590,15 @@ export class SyncManager {
     }
 
     if (binaryFiles.size > 0) {
-      const updatedPatterns = [...new Set([...this.config.excludePatterns, ...binaryFiles])];
-      await this.configManager.saveWorkspaceConfig({ excludePatterns: updatedPatterns });
+      const updatedPatterns = [
+        ...new Set([...this.config.excludePatterns, ...binaryFiles]),
+      ];
+      await this.configManager.saveWorkspaceConfig({
+        excludePatterns: updatedPatterns,
+      });
       this.config = await this.configManager.getConfig();
       this.outputChannel.appendLine(
-        `Added ${binaryFiles.size} binary file(s) to exclude patterns: ${[...binaryFiles].join(", ")}`
+        `Added ${binaryFiles.size} binary file(s) to exclude patterns: ${[...binaryFiles].join(', ')}`,
       );
     }
 

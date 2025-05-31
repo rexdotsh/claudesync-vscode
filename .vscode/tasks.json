@@ -1,63 +1,50 @@
-// See https://go.microsoft.com/fwlink/?LinkId=733558
-// for the documentation about the tasks.json format
 {
   "version": "2.0.0",
   "tasks": [
     {
-      "label": "watch",
-      "dependsOn": ["yarn: watch:tsc", "yarn: watch:esbuild"],
-      "presentation": {
-        "reveal": "never"
-      },
+      "type": "shell",
+      "label": "build",
+      "command": "yarn",
+      "args": ["build"],
       "group": {
         "kind": "build",
         "isDefault": true
       },
-      "problemMatcher": []
-    },
-    {
-      "type": "shell",
-      "command": "yarn",
-      "args": ["run", "watch:esbuild"],
-      "group": "build",
-      "problemMatcher": "$esbuild-watch",
-      "isBackground": true,
-      "label": "yarn: watch:esbuild",
       "presentation": {
-        "group": "watch",
-        "reveal": "never"
-      }
-    },
-    {
-      "type": "shell",
-      "command": "yarn",
-      "args": ["run", "watch:tsc"],
-      "group": "build",
-      "problemMatcher": "$tsc-watch",
-      "isBackground": true,
-      "label": "yarn: watch:tsc",
-      "presentation": {
-        "group": "watch",
-        "reveal": "never"
-      }
-    },
-    {
-      "type": "shell",
-      "command": "yarn",
-      "args": ["run", "watch-tests"],
-      "problemMatcher": "$tsc-watch",
-      "isBackground": true,
-      "presentation": {
-        "reveal": "never",
-        "group": "watchers"
+        "reveal": "silent"
       },
-      "group": "build",
-      "label": "yarn: watch-tests"
+      "problemMatcher": []
     },
     {
-      "label": "tasks: watch-tests",
-      "dependsOn": ["yarn: watch", "yarn: watch-tests"],
-      "problemMatcher": []
+      "type": "shell",
+      "label": "watch",
+      "command": "yarn",
+      "args": ["dev"],
+      "isBackground": true,
+      "group": "build",
+      "presentation": {
+        "reveal": "never"
+      },
+      "problemMatcher": {
+        "owner": "esbuild",
+        "pattern": [
+          {
+            "regexp": "^✘ \\[ERROR\\] (.*)$",
+            "message": 1
+          },
+          {
+            "regexp": "^    (.*):(\\d+):(\\d+):$",
+            "file": 1,
+            "line": 2,
+            "column": 3
+          }
+        ],
+        "background": {
+          "activeOnStart": true,
+          "beginsPattern": "^\\[watch\\] build started$",
+          "endsPattern": "^\\[watch\\] build finished$"
+        }
+      }
     }
   ]
 }

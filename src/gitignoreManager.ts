@@ -1,5 +1,5 @@
-import ignore from "ignore";
-import * as vscode from "vscode";
+import ignore from 'ignore';
+import * as vscode from 'vscode';
 
 export class GitignoreManager {
   private ig: ReturnType<typeof ignore> | null = null;
@@ -18,12 +18,14 @@ export class GitignoreManager {
 
   public async loadGitignore(workspaceFolder: vscode.Uri): Promise<void> {
     try {
-      const gitignorePath = vscode.Uri.joinPath(workspaceFolder, ".gitignore");
+      const gitignorePath = vscode.Uri.joinPath(workspaceFolder, '.gitignore');
       const content = await vscode.workspace.fs.readFile(gitignorePath);
-      const gitignoreContent = Buffer.from(content).toString("utf8");
+      const gitignoreContent = Buffer.from(content).toString('utf8');
       this.loadFromContent(gitignoreContent);
     } catch (error) {
-      this.outputChannel.appendLine("No .gitignore file found or failed to read it");
+      this.outputChannel.appendLine(
+        'No .gitignore file found or failed to read it',
+      );
       this.ig = null;
     }
   }
@@ -31,9 +33,9 @@ export class GitignoreManager {
   public loadFromContent(content: string): void {
     try {
       this.ig = ignore().add(content);
-      this.outputChannel.appendLine("Successfully loaded gitignore patterns");
+      this.outputChannel.appendLine('Successfully loaded gitignore patterns');
     } catch (error) {
-      this.outputChannel.appendLine("Failed to parse gitignore content");
+      this.outputChannel.appendLine('Failed to parse gitignore content');
       this.ig = null;
     }
   }
