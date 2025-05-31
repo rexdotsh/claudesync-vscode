@@ -133,6 +133,13 @@ export class SyncManager {
       return { success: false, message: 'No workspace folder found' };
     }
 
+    if (!this.currentOrg || !this.currentProject) {
+      return {
+        success: false,
+        message: 'Project not initialized. Please run Initialize Project first',
+      };
+    }
+
     try {
       const instructionsUri = vscode.Uri.joinPath(
         workspaceFolder.uri,
@@ -143,8 +150,8 @@ export class SyncManager {
       const instructions = new TextDecoder().decode(instructionsContent);
 
       await this.claudeClient.updateProjectPromptTemplate(
-        this.currentOrg?.id,
-        this.currentProject?.id,
+        this.currentOrg.id,
+        this.currentProject.id,
         instructions,
       );
       this.outputChannel.appendLine(
@@ -267,6 +274,14 @@ export class SyncManager {
         return projectResult;
       }
 
+      const org = this.currentOrg;
+      const proj = this.currentProject;
+      if (!org || !proj) {
+        return projectResult;
+      }
+      const orgId = org.id;
+      const projectId = proj.id;
+
       // load gitignore patterns if workspace folder exists
       const workspaceFolder = vscode.workspace.workspaceFolders?.[0];
       if (workspaceFolder) {
@@ -282,10 +297,7 @@ export class SyncManager {
         `Prepared ${fileContents.length} files for sync`,
       );
 
-      const existingFiles = await this.claudeClient.listFiles(
-        this.currentOrg?.id,
-        this.currentProject?.id,
-      );
+      const existingFiles = await this.claudeClient.listFiles(orgId, projectId);
       let skipped = 0;
       let synced = 0;
       let deleted = 0;
@@ -329,15 +341,15 @@ export class SyncManager {
               }
 
               await this.claudeClient.deleteFile(
-                this.currentOrg?.id,
-                this.currentProject?.id,
+                orgId,
+                projectId,
                 existingFile.uuid,
               );
             }
 
             await this.claudeClient.uploadFile(
-              this.currentOrg?.id,
-              this.currentProject?.id,
+              orgId,
+              projectId,
               file.path,
               file.content,
             );
@@ -366,8 +378,8 @@ export class SyncManager {
               for (const file of filesToDelete) {
                 try {
                   await this.claudeClient.deleteFile(
-                    this.currentOrg?.id,
-                    this.currentProject?.id,
+                    orgId,
+                    projectId,
                     file.uuid,
                   );
                   deleted++;
