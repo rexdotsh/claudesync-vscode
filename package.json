@@ -4,7 +4,7 @@
   "description": "Sync your code with Claude.ai Projects",
   "publisher": "rexdotsh",
   "license": "MIT",
-  "version": "0.1.6",
+  "version": "0.1.7",
   "icon": "assets/logo.png",
   "repository": {
     "type": "git",
@@ -230,7 +230,7 @@
     "lint:check": "biome lint",
     "prepublish": "yarn run format:check && yarn run lint:check && yarn run build",
     "vscode:prepublish": "yarn run prepublish",
-    "publish": "vsce publish"
+    "publish": "vsce publish --no-dependencies"
   },
   "dependencies": {
     "axios": "^1.6.2",
@@ -240,7 +240,7 @@
     "@biomejs/biome": "^1.9.4",
     "@types/node": "20.x",
     "@types/vscode": "^1.90.0",
-    "@vscode/vsce": "^3.2.1",
+    "@vscode/vsce": "^3.4.2",
     "esbuild": "^0.25.5",
     "typescript": "^5.7.2"
   },
