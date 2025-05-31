@@ -4,9 +4,11 @@ out/**
 node_modules/**
 src/**
 .gitignore
-.yarnrc
+.yarnrc.yml
 esbuild.js
 vsc-extension-quickstart.md
+biome.jsonc
+.yarn/*
 **/tsconfig.json
 **/eslint.config.mjs
 **/*.map
