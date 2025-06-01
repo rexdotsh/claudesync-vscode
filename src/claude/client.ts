@@ -1,4 +1,3 @@
-import axios, { AxiosError } from 'axios';
 import type { ClaudeSyncConfig } from '../types';
 
 export interface Organization {
@@ -44,80 +43,63 @@ export class ClaudeClient {
     endpoint: string,
     data?: Record<string, unknown>,
   ): Promise<T> {
-    try {
-      const url = `${this.baseUrl}${endpoint}`;
-      console.log(`Making ${method} request to ${url}`);
-      const response = await axios({
-        method,
-        url,
-        data,
-        headers: {
-          'User-Agent': 'Mozilla/5.0 (X11; Linux x86_64)',
-          'Accept-Encoding': 'gzip',
-          Accept: 'application/json',
-          Cookie: `sessionKey=${this.sessionToken};`,
-        },
-        validateStatus: null,
-      });
-
-      if (response.status === 403) {
-        console.error('Authentication failed - invalid session token');
-        console.error('Response data:', response.data);
-        throw new Error(
-          "Invalid session token or unauthorized access. Please make sure your token is correct and you're logged into claude.ai",
-        );
-      }
-
-      if (response.status === 429) {
-        console.error('Rate limit exceeded', response.data);
-        const resetTime = new Date(response.data.error.message.resetsAt);
-        throw new Error(
-          `Rate limit exceeded. Try again after ${resetTime.toLocaleString()}`,
-        );
-      }
-
-      if (response.status >= 400) {
-        console.error(`API error ${response.status}:`, response.data);
-        throw new Error(
-          `API request failed (${response.status}): ${response.data?.error || response.statusText}`,
-        );
-      }
-
-      return response.data;
-    } catch (error) {
-      if (error instanceof AxiosError) {
-        console.error('Axios error:', {
-          status: error.response?.status,
-          data: error.response?.data,
-          message: error.message,
-          config: {
-            url: error.config?.url,
-            headers: error.config?.headers,
-          },
-        });
-
-        if (error.response?.status === 403) {
-          throw new Error(
-            "Invalid session token or unauthorized access. Please make sure your token is correct and you're logged into claude.ai",
-          );
-        }
-        if (error.response?.status === 429) {
-          const resetTime = new Date(
-            error.response.data.error.message.resetsAt,
-          );
-          throw new Error(
-            `Rate limit exceeded. Try again after ${resetTime.toLocaleString()}`,
-          );
-        }
-        throw new Error(
-          `API request failed: ${error.message} (${error.response?.status || 'unknown status'})`,
-        );
-      }
-      console.error('Non-Axios error:', error);
-      throw new Error(
-        `API request failed: ${error instanceof Error ? error.message : String(error)}`,
-      );
+    const url = `${this.baseUrl}${endpoint}`;
+    console.log(`Making ${method} request to ${url}`);
+    const headers = new Headers({
+      'User-Agent': 'Mozilla/5.0 (X11; Linux x86_64)',
+      'Accept-Encoding': 'gzip',
+      'Accept': 'application/json',
+      'Cookie': `sessionKey=${this.sessionToken}`,
+    });
+    if (data) {
+      headers.set('Content-Type', 'application/json');
     }
+    let response: Response;
+    try {
+      const init: RequestInit = { method, headers };
+      if (data) {
+        init.body = JSON.stringify(data);
+      }
+      response = await fetch(url, init);
+    } catch (networkError) {
+      console.error('Network request failed:', networkError);
+      throw new Error(`Network request failed: ${networkError instanceof Error ? networkError.message : String(networkError)}`);
+    }
+
+    let responseData: any = null;
+    try {
+      responseData = await response.json();
+    } catch {
+      try {
+        responseData = await response.text();
+      } catch {
+        responseData = null;
+      }
+    }
+
+    if (response.status === 403) {
+      console.error('Authentication failed - invalid session token');
+      console.error('Response data:', responseData);
+      throw new Error(`Invalid session token or unauthorized access. Please make sure your token is correct and you're logged into claude.ai`);
+    }
+
+    if (response.status === 429) {
+      console.error('Rate limit exceeded', responseData);
+      const resetTimeRaw = responseData?.error?.message?.resetsAt;
+      const resetTime = resetTimeRaw ? new Date(resetTimeRaw) : null;
+      if (resetTime) {
+        throw new Error(`Rate limit exceeded. Try again after ${resetTime.toLocaleString()}`);
+      } else {
+        throw new Error('Rate limit exceeded.');
+      }
+    }
+
+    if (!response.ok) {
+      console.error(`API error ${response.status}:`, responseData);
+      throw new Error(`API request failed (${response.status}): ${responseData?.error || response.statusText}`);
+    }
+
+    return responseData as T;
   }
 
   async getOrganizations(): Promise<Organization[]> {
