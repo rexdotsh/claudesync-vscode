@@ -233,7 +233,6 @@
     "publish": "vsce publish --no-dependencies"
   },
   "dependencies": {
-    "axios": "^1.6.2",
     "ignore": "^7.0.3"
   },
   "devDependencies": {
