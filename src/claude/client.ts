@@ -32,7 +32,7 @@ interface ProjectResponse {
 }
 
 export class ClaudeClient {
-  private readonly baseUrl = 'https://api.claude.ai/api';
+  private readonly baseUrl = 'https://claude.ai/api';
   private readonly sessionToken: string;
 
   constructor(config: ClaudeSyncConfig) {
