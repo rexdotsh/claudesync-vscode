@@ -48,8 +48,8 @@ export class ClaudeClient {
     const headers = new Headers({
       'User-Agent': 'Mozilla/5.0 (X11; Linux x86_64)',
       'Accept-Encoding': 'gzip',
-      'Accept': 'application/json',
-      'Cookie': `sessionKey=${this.sessionToken}`,
+      Accept: 'application/json',
+      Cookie: `sessionKey=${this.sessionToken}`,
     });
     if (data) {
       headers.set('Content-Type', 'application/json');
@@ -63,7 +63,9 @@ export class ClaudeClient {
       response = await fetch(url, init);
     } catch (networkError) {
       console.error('Network request failed:', networkError);
-      throw new Error(`Network request failed: ${networkError instanceof Error ? networkError.message : String(networkError)}`);
+      throw new Error(
+        `Network request failed: ${networkError instanceof Error ? networkError.message : String(networkError)}`,
+      );
     }
 
     let responseData: any = null;
@@ -80,7 +82,9 @@ export class ClaudeClient {
     if (response.status === 403) {
       console.error('Authentication failed - invalid session token');
       console.error('Response data:', responseData);
-      throw new Error(`Invalid session token or unauthorized access. Please make sure your token is correct and you're logged into claude.ai`);
+      throw new Error(
+        `Invalid session token or unauthorized access. Please make sure your token is correct and you're logged into claude.ai`,
+      );
     }
 
     if (response.status === 429) {
@@ -88,7 +92,9 @@ export class ClaudeClient {
       const resetTimeRaw = responseData?.error?.message?.resetsAt;
       const resetTime = resetTimeRaw ? new Date(resetTimeRaw) : null;
       if (resetTime) {
-        throw new Error(`Rate limit exceeded. Try again after ${resetTime.toLocaleString()}`);
+        throw new Error(
+          `Rate limit exceeded. Try again after ${resetTime.toLocaleString()}`,
+        );
       } else {
         throw new Error('Rate limit exceeded.');
       }
@@ -96,7 +102,9 @@ export class ClaudeClient {
 
     if (!response.ok) {
       console.error(`API error ${response.status}:`, responseData);
-      throw new Error(`API request failed (${response.status}): ${responseData?.error || response.statusText}`);
+      throw new Error(
+        `API request failed (${response.status}): ${responseData?.error || response.statusText}`,
+      );
     }
 
     return responseData as T;
